@@ -4,8 +4,10 @@ from django.views.generic import TemplateView, ListView, DetailView
 from django.views.generic.edit import FormView
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
+from datetime import datetime
 from .models import PolicySection, Policy
 from .forms import PolicyRequestForm
+from .utils import send_mailgun_email
 
 # Home page view: Displays the homepage for authenticated users
 class IndexView(LoginRequiredMixin, TemplateView):
@@ -51,7 +53,7 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         # Add the related policy to the context
         context = super().get_context_data(**kwargs)
         context['policy'] = get_object_or_404(Policy, number=self.kwargs['policy_number'])
-        context['success'] = self.request.GET.get('success', False)  # Check for success flag in GET params
+        context['success'] = self.request.GET.get('success', False)
         return context
 
     def form_valid(self, form):
@@ -60,6 +62,29 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         policy_request = form.save(commit=False)
         policy_request.policy = policy
         policy_request.save()
+
+        # Prepare dynamic variables for the email
+        employee_email = form.cleaned_data['email']
+        question = form.cleaned_data['question']
+        policy_title = policy.title
+        policy_number = policy.number
+        submission_date = datetime.now().strftime('%m-%d-%Y %I:%M %p')
+
+        # Variables to populate the template
+        variables = {
+            "policy_number": policy_number,
+            "policy_title": policy_title,
+            "question": question,
+            "submission_date": submission_date,
+            "employee_email": employee_email,
+        }
+
+        # Send confirmation email to the employee
+        send_mailgun_email(
+            to_email=employee_email,
+            subject="Policy Request Received",
+            variables=variables,
+        )
 
         # Redirect to the same page with success=True
         success_url = f"{self.get_success_url()}?success=True"
