@@ -1,9 +1,9 @@
 ### INF601 - Advanced Programming in Python
 ### Mackenzie Freeman
-### Mini Project 4
+### Final Project
 
 
-# MiniProject4 - Mini Handbook
+# Final Project - Company Handbook
 
 ## Description
 
@@ -12,6 +12,10 @@ A handbook web app allowing users to view and request clarifications on company 
 ## Getting Started
 
 ### Dependencies
+Navigate to the mysite directory:
+```
+cd mysite
+```
 
 You can install all required libraries using the following command:
 ```
@@ -55,7 +59,7 @@ Access the application at:
 * Section Page: Shows detailed policies for the selected section.
 * Request Form Page: Allows users to submit questions or requests for clarification on policies.
 * Login/Register Pages: Allows user to login or create an account to view handbook.
-* 
+
 ### Admin Features
 * Policy Management: Add, edit, and manage policies.
 * Policy Request Management: Track and resolve user-submitted requests.
