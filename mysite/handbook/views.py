@@ -49,6 +49,12 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         # Stay on the same page but pass success=True as a GET parameter
         return reverse("handbook:request_form", kwargs={'policy_number': self.kwargs['policy_number']})
 
+    def get_form_kwargs(self):
+        # Pass the current user to the form to prepopulate fields
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
     def get_context_data(self, **kwargs):
         # Add the related policy to the context
         context = super().get_context_data(**kwargs)
@@ -61,10 +67,12 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         policy = get_object_or_404(Policy, number=self.kwargs['policy_number'])
         policy_request = form.save(commit=False)
         policy_request.policy = policy
+        policy_request.name = f"{self.request.user.first_name} {self.request.user.last_name}"
+        policy_request.email = self.request.user.email
         policy_request.save()
 
         # Prepare dynamic variables for the email
-        employee_email = form.cleaned_data['email']
+        employee_email = self.request.user.email
         question = form.cleaned_data['question']
         policy_title = policy.title
         policy_number = policy.number

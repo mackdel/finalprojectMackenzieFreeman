@@ -8,19 +8,27 @@ from .models import CustomUser, Department
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
     fieldsets = UserAdmin.fieldsets + (
-        ("Custom Fields", {
+        ("Department", {
             "fields": ("role", "department"),
         }),
     )
-    list_display = ("username", "email", "role", "department")
+    list_display = ("last_name", "first_name", "email", "role", "department")
     list_filter = ("role", "department")
     search_fields = ("username", "email", "role")
-    ordering = ("username",)
+    ordering = ("last_name",)
 
 
 # Admin configuration for Department model
 class DepartmentAdmin(admin.ModelAdmin):
     model = Department
+    fieldsets = (
+        (None, {
+            "fields": ("name",),
+        }),
+        ("Department Details", {
+            "fields": ("view_department_heads", "view_department_employees"),
+        })
+    )
     list_display = ("name",)
     search_fields = ("name",)
     ordering = ("name",)
@@ -31,7 +39,7 @@ class DepartmentAdmin(admin.ModelAdmin):
         if heads.exists():
             # Create a clickable link for each department head
             return format_html("<br>".join([
-                f'<a href="{reverse("admin:accounts_customuser_change", args=[user.id])}">{user.username} ({user.email})</a>'
+                f'<a href="{reverse("super_admin:accounts_customuser_change", args=[user.id])}">{user.first_name} {user.last_name}</a>'
                 for user in heads
             ]))
         return "None"
@@ -41,20 +49,10 @@ class DepartmentAdmin(admin.ModelAdmin):
         if employees.exists():
             # Create a clickable link for each employee
             return format_html("<br>".join([
-                f'<a href="{reverse("admin:accounts_customuser_change", args=[user.id])}">{user.username} ({user.email})</a>'
+                f'<a href="{reverse("super_admin:accounts_customuser_change", args=[user.id])}">{user.first_name} {user.last_name}</a>'
                 for user in employees
             ]))
         return "None"
 
     view_department_heads.short_description = "Department Heads"
     view_department_employees.short_description = "Employees"
-
-    # Organize fieldsets for better layout
-    fieldsets = (
-        (None, {
-            "fields": ("name",),
-        }),
-        ("Department Details", {
-            "fields": ("view_department_heads","view_department_employees"),
-        })
-    )

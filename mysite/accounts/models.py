@@ -9,6 +9,11 @@ class Department(models.Model):
 
 
 class CustomUser(AbstractUser):
+    # Additional Required fields
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=30, blank=False)
+    last_name = models.CharField(max_length=30, blank=False)
+
     # Define user roles
     EMPLOYEE = 'employee'
     DEPARTMENT_HEAD = 'department_head'

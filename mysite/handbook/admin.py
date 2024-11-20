@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep
 from accounts.models import CustomUser, Department
-from accounts.admin import CustomUserAdmin
+from accounts.admin import CustomUserAdmin, DepartmentAdmin
 
 # Custom Admin site for Super Admins
 class SuperAdminSite(admin.AdminSite):
@@ -108,23 +108,18 @@ class PolicyAdminForDepartmentHead(PolicyAdmin):
 class PolicyRequestAdmin(admin.ModelAdmin):
     fieldsets = [
         ("Request Information", {
-            "fields": ('policy', 'name', 'email', 'question', 'submitted_at')
+            "fields": ('policy', 'first_name', 'last_name', 'email', 'question', 'submitted_at')
         }),
         ("Resolution", {
             "fields": ('is_resolved', 'admin_notes')
         }),
     ]
-    readonly_fields = ('policy', 'name', 'email', 'question', 'submitted_at')  # Non-editable fields
-    list_display = ('policy', 'name_or_anonymous', 'email', 'submitted_at', 'is_resolved')
+    readonly_fields = ('policy', 'first_name', 'last_name', 'email', 'question', 'submitted_at')  # Non-editable fields
+    list_display = ('policy', 'first_name', 'last_name', 'email', 'submitted_at', 'is_resolved')
     list_filter = ('is_resolved', 'submitted_at', 'policy__section')
-    search_fields = ('name', 'email', 'question', 'policy__title', 'policy__section__title')
+    search_fields = ('first_name', 'last_name', 'email', 'question', 'policy__title', 'policy__section__title')
     ordering = ('-submitted_at',)  # Order by the most recent submissions
     actions = ['mark_requests_resolved']
-
-    # Show 'Anonymous' if name is blank.
-    def name_or_anonymous(self, obj):
-        return obj.name or "Anonymous"
-    name_or_anonymous.short_description = "Name"
 
     # Mark selected requests as resolved.
     def mark_requests_resolved(self, request, queryset):
@@ -177,7 +172,7 @@ super_admin_site.register(PolicyRequest, PolicyRequestAdmin)
 
 # Register accounts models to super admin
 super_admin_site.register(CustomUser, CustomUserAdmin)
-super_admin_site.register(Department)
+super_admin_site.register(Department, DepartmentAdmin)
 
 # Register models with the department head admin site
 department_head_admin.register(Policy, PolicyAdminForDepartmentHead)

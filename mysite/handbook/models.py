@@ -114,10 +114,12 @@ class Definition(models.Model):
         verbose_name = "Definition"  # Singular form
         verbose_name_plural = "Definitions"  # Plural form
 
+
 # Represents request forms on each policy
 class PolicyRequest(models.Model):
     policy = models.ForeignKey('Policy', on_delete=models.CASCADE, related_name='requests')
-    name = models.CharField(max_length=100, blank=True, null=True)  # Allows anonymous submissions
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
     email = models.EmailField()
     question = models.TextField()
     submitted_at = models.DateTimeField(auto_now_add=True)
@@ -125,7 +127,7 @@ class PolicyRequest(models.Model):
     admin_notes = models.TextField(blank=True, null=True)  # Admin can add follow-up notes
 
     def __str__(self):
-        return f"Request for {self.policy.title} by {self.name or 'Anonymous'}"
+        return f"Request for {self.policy.title} by {self.first_name} {self.last_name}"
 
     class Meta:
         verbose_name = "Policy Request"  # Singular form

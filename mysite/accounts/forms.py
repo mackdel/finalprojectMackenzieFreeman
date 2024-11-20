@@ -3,9 +3,12 @@ from django import forms
 from .models import CustomUser
 
 class CustomUserCreationForm(UserCreationForm):
+    first_name = forms.CharField(required=True, max_length=30, label="First Name")
+    last_name = forms.CharField(required=True, max_length=30, label="Last Name")
+
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['first_name', 'last_name' ,'username', 'email', 'password1', 'password2']
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
