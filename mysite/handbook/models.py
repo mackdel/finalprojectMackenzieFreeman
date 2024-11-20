@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 # Validator for section numbers (e.g., '1.0', '2.0', etc.)
@@ -54,16 +55,13 @@ class Policy(models.Model):
     # Definitions associated with the policy
     definitions = models.ManyToManyField('Definition', blank=True, related_name="policies")
 
-    policy_owner = models.CharField(
-        max_length=200,
-        choices=[
-            ('Executive', 'Executive'),
-            ('Human Resources', 'Human Resources'),
-            ('Business Development', 'Business Development'),
-            ('Information Technology', 'Information Technology'),
-            ('Finance', 'Finance'),
-            ('Quality Management', 'Quality Management'),
-        ]
+    # Choose Department
+    policy_owner = models.ForeignKey(
+        'accounts.Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="policies"
     )
     version = models.CharField(max_length=10)  # For tracking policy version
     pub_date = models.DateField("Date Created", auto_now_add=True)

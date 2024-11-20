@@ -25,6 +25,13 @@
                     {% endif %}
                 </div>
                 <div class="mb-3 row">
+                    <label for="id_email" class="form-label">Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="text-danger small">{{ form.email.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3 row">
                     <label for="id_password1" class="form-label">Password</label>
                     {{ form.password1 }}
                     {% if form.password1.errors %}

@@ -121,12 +121,17 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Custom User Model
+
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'EST'
+TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
