@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'accounts.middleware.RoleRedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'mysite.urls'
@@ -150,5 +151,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Redirects after login/logout
-LOGIN_REDIRECT_URL = '/handbook/' # Redirect to home after login
+LOGIN_REDIRECT_URL = '/' # This will be overridden by the custom login view
 LOGOUT_REDIRECT_URL = '/accounts/login/'  # Redirect to home after logout
