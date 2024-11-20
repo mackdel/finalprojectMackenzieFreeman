@@ -1,5 +1,30 @@
 from django.contrib import admin
 from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep
+from accounts.models import CustomUser, Department
+from accounts.admin import CustomUserAdmin
+
+# Custom Admin site for Super Admins
+class SuperAdminSite(admin.AdminSite):
+    site_header = "Handbook Admin Portal"
+    site_title = "Handbook Site Admin"
+    index_title = "Welcome to the Handbook Admin Dashboard"
+
+super_admin_site = SuperAdminSite(name="super_admin")
+
+# Custom Admin site for Department Heads
+class DepartmentHeadAdminSite(admin.AdminSite):
+    site_header = "Department Head Portal"
+    site_title = "Department Head Site Admin"
+    index_title = "Welcome to the Department Head Dashboard"
+
+    # Only allow users with the department head role
+    def has_permission(self, request):
+        if not request.user.is_authenticated:
+            return False  # Prevent access for unauthenticated users
+        return request.user.is_department_head()
+
+department_head_admin = DepartmentHeadAdminSite(name="department_head_admin")
+
 
 # Inline configuration for Procedure Steps in Policies
 class ProcedureStepInline(admin.TabularInline):
@@ -40,6 +65,43 @@ class PolicyAdmin(admin.ModelAdmin):
     filter_horizontal = ["related_policies"]  # Horizontal widget for managing related policies
     inlines = [ProcedureStepInline, DefinitionInline]
 
+
+# Department Head Configuration of Policy Model
+class PolicyAdminForDepartmentHead(PolicyAdmin):
+    # Allow access to this model in the admin for department heads
+    def has_module_permission(self, request):
+        return request.user.is_department_head()
+
+    # Department heads can only view policies within their department
+    def has_view_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj is None or obj.policy_owner == request.user.department
+        return super().has_view_permission(request, obj)
+
+    # Department heads can only change policies within their department
+    def has_change_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj and obj.policy_owner == request.user.department
+        return super().has_change_permission(request, obj)
+
+    # Custom list_filter for department heads
+    def get_list_filter(self, request):
+        if request.user.is_department_head():
+            return ('section', 'pub_date')
+        return super().get_list_filter(request)
+
+    # Restrict policies to those belonging to the department head's department
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_department_head():
+            return qs.filter(policy_owner=request.user.department)
+        return qs
+
+
 # Admin configuration for Policy Request model
 class PolicyRequestAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -74,9 +136,47 @@ class PolicyRequestAdmin(admin.ModelAdmin):
         return False
 
 
-# Register models with admin site
-admin.site.register(PolicySection)
-admin.site.register(Policy, PolicyAdmin)
-admin.site.register(Definition)
-admin.site.register(PolicyRequest, PolicyRequestAdmin)
+# Department Head Configuration of Policy Request model
+class PolicyRequestAdminForDepartmentHead(PolicyRequestAdmin):
+    def has_module_permission(self, request):
+        return request.user.is_department_head()
 
+    # Department heads can only view requests for policies within their department
+    def has_view_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj is None or obj.policy.policy_owner == request.user.department
+        return super().has_view_permission(request, obj)
+
+    # Department heads can only change requests for policies within their department
+    def has_change_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj and obj.policy.policy_owner == request.user.department
+        return super().has_change_permission(request, obj)
+
+    # Restrict requests to those related to policies within the department head's department
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_department_head():
+            return qs.filter(policy__policy_owner=request.user.department)
+        return qs
+
+
+
+
+# Register handbook models to super admin
+super_admin_site.register(PolicySection)
+super_admin_site.register(Policy, PolicyAdmin)
+super_admin_site.register(Definition)
+super_admin_site.register(PolicyRequest, PolicyRequestAdmin)
+
+# Register accounts models to super admin
+super_admin_site.register(CustomUser, CustomUserAdmin)
+super_admin_site.register(Department)
+
+# Register models with the department head admin site
+department_head_admin.register(Policy, PolicyAdminForDepartmentHead)
+department_head_admin.register(PolicyRequest, PolicyRequestAdminForDepartmentHead)

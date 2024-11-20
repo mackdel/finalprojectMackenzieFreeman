@@ -4,20 +4,18 @@ from django.urls import reverse
 from django.utils.html import format_html
 from .models import CustomUser, Department
 
-
 # Admin configuration for CustomUser model
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
     fieldsets = UserAdmin.fieldsets + (
         ("Custom Fields", {
-            "fields": ("role", "departments"),
+            "fields": ("role", "department"),
         }),
     )
-    list_display = ("username", "email", "role")
-    list_filter = ("role", "departments")
+    list_display = ("username", "email", "role", "department")
+    list_filter = ("role", "department")
     search_fields = ("username", "email", "role")
     ordering = ("username",)
-    filter_horizontal = ("departments",)
 
 
 # Admin configuration for Department model
@@ -29,7 +27,6 @@ class DepartmentAdmin(admin.ModelAdmin):
     readonly_fields = ("view_department_heads", "view_department_employees")
 
     def view_department_heads(self, obj):
-        """Display department heads in a clean, multi-line format"""
         heads = obj.users.filter(role=CustomUser.DEPARTMENT_HEAD)
         if heads.exists():
             # Create a clickable link for each department head
@@ -40,7 +37,6 @@ class DepartmentAdmin(admin.ModelAdmin):
         return "None"
 
     def view_department_employees(self, obj):
-        """Display employees in a clean, multi-line format"""
         employees = obj.users.filter(role=CustomUser.EMPLOYEE)
         if employees.exists():
             # Create a clickable link for each employee
@@ -62,7 +58,3 @@ class DepartmentAdmin(admin.ModelAdmin):
             "fields": ("view_department_heads","view_department_employees"),
         })
     )
-
-# Register models with the admin site
-admin.site.register(CustomUser, CustomUserAdmin)
-admin.site.register(Department, DepartmentAdmin)
