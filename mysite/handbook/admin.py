@@ -8,6 +8,7 @@ class SuperAdminSite(admin.AdminSite):
     site_header = "Handbook Admin Portal"
     site_title = "Handbook Site Admin"
     index_title = "Welcome to the Handbook Admin Dashboard"
+    site_url = "/handbook/"
 
 super_admin_site = SuperAdminSite(name="super_admin")
 
@@ -16,6 +17,7 @@ class DepartmentHeadAdminSite(admin.AdminSite):
     site_header = "Department Head Portal"
     site_title = "Department Head Site Admin"
     index_title = "Welcome to the Department Head Dashboard"
+    site_url = "/handbook/"
 
     # Only allow users with the department head role
     def has_permission(self, request):

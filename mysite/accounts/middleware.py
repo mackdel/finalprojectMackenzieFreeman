@@ -11,8 +11,12 @@ class RoleRedirectMiddleware:
         if request.path == '/accounts/logout/':
             return self.get_response(request)
 
-        # Check authenticated user and redirect based on role
+        # Skip redirect if the user is accessing the handbook site
         if request.user.is_authenticated:
+            if request.path.startswith('/handbook/'):
+                return self.get_response(request)
+
+            # Redirect based on role
             if request.user.is_superuser and not request.path.startswith(reverse('super_admin:index')):
                 return redirect('super_admin:index')
             elif request.user.is_department_head() and not request.path.startswith(reverse('department_head_admin:index')):
