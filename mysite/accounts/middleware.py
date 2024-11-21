@@ -7,15 +7,21 @@ class RoleRedirectMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Skip middleware logic for logout URL
-        if request.path == '/accounts/logout/':
+        # Skip middleware logic for logout and account-related URLs
+        exempt_paths = [
+            '/accounts/logout/',
+            reverse('password_change'),
+            reverse('password_change_done'),
+            reverse('password_reset'),
+            reverse('password_reset_done'),
+            reverse('password_reset_confirm', kwargs={'uidb64': 'uidb64', 'token': 'token'}),
+            reverse('password_reset_complete'),
+        ]
+
+        if request.path in exempt_paths or request.path.startswith('/handbook/'):
             return self.get_response(request)
 
-        # Skip redirect if the user is accessing the handbook site
         if request.user.is_authenticated:
-            if request.path.startswith('/handbook/'):
-                return self.get_response(request)
-
             # Redirect based on role
             if request.user.is_superuser and not request.path.startswith(reverse('super_admin:index')):
                 return redirect('super_admin:index')
@@ -23,6 +29,5 @@ class RoleRedirectMiddleware:
                 return redirect('department_head_admin:index')
             elif request.user.is_employee() and not request.path.startswith('/handbook/'):
                 return redirect('/handbook/')
+
         return self.get_response(request)
-
-

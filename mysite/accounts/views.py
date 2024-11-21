@@ -1,6 +1,9 @@
 from django.urls import reverse_lazy, reverse
 from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import CreateView
+from django.views.generic import TemplateView
+from handbook.models import PolicyRequest
 from .forms import CustomUserCreationForm
 
 # Signup view: Allows users to make a new account
@@ -23,3 +26,17 @@ class RoleBasedLoginView(LoginView):
             return '/handbook/'  # Redirect employees to the handbook
         else:
             return '/'  # Default fallback if no role is set
+
+
+# Profile View: Allows users to view account info
+class UserProfileView(LoginRequiredMixin, TemplateView):
+    template_name = "accounts/profile.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        # Add user details to context
+        context['user'] = user
+        # Fetch the user's submitted forms
+        context['submitted_forms'] = PolicyRequest.objects.filter(email=user.email)
+        return context

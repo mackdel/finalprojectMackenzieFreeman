@@ -16,18 +16,24 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Mailgun Settings
+
+# Mailgun API Key and Domain
 MAILGUN_API_KEY = config('MAILGUN_API_KEY')
 MAILGUN_DOMAIN = config('MAILGUN_DOMAIN')
 
+# Anymail configuration
+ANYMAIL = {
+    "MAILGUN_API_KEY": MAILGUN_API_KEY,
+    "MAILGUN_SENDER_DOMAIN": MAILGUN_DOMAIN,
+}
 
-# Email Backend Configuration for Mailgun SMTP
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.mailgun.org'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = f'postmaster@{MAILGUN_DOMAIN}'
-EMAIL_HOST_PASSWORD = MAILGUN_API_KEY
+# Email Backend
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+
+# Default From Email and Server Email
+DEFAULT_FROM_EMAIL = f"noreply@{MAILGUN_DOMAIN}"
+SERVER_EMAIL = f"server@{MAILGUN_DOMAIN}"  # Email for error notifications
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -57,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'debug_toolbar',
     'accounts',
+    'anymail'
 ]
 
 MIDDLEWARE = [

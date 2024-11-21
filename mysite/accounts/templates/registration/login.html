@@ -30,6 +30,7 @@
                     {% if form.password.errors %}
                         <div class="text-danger small">{{ form.password.errors|striptags }}</div>
                     {% endif %}
+                    <p>Forgot Password? <a href="{% url 'password_reset' %}" class="">Reset Password</a></p>
                 </div>
                 {% if form.non_field_errors %}
                     <div class="text-danger small mb-3">

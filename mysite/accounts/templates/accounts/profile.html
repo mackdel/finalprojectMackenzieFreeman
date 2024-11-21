@@ -1,0 +1,67 @@
+{% extends "handbook/base.html" %}
+
+{% block title %}
+    User Profile
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">User Profile</h1>
+    {% if user.is_department_head or user.is_admin %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Admin Options</h5>
+                {% if user.is_admin %}
+                    <a href="/super-admin/" class="btn btn-primary">Go to Admin Portal</a>
+                {% elif user.is_department_head %}
+                    <a href="/department-head-admin/" class="btn btn-primary">Go to Department Head Portal</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Personal Information</h5>
+            <p><strong>Full Name:</strong> {{ user.get_full_name }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><a href="{% url 'accounts:password_change' %}" class="btn btn-warning">Change Password</a></p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Submitted Forms</h5>
+            {% if submitted_forms %}
+                <ul class="list-group">
+                    {% for form in submitted_forms %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                <strong>Policy:</strong> {{ form.policy.title }}<br>
+                                <strong>Question:</strong> {{ form.question }}
+                            </span>
+                             <span class="badge {% if form.is_resolved %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if form.is_resolved %}
+                                    Resolved
+                                {% else %}
+                                    Pending
+                                {% endif %}
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No forms submitted yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-secondary" type="submit">Logout</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
