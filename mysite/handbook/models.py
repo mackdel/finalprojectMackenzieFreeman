@@ -47,7 +47,6 @@ class Policy(models.Model):
     scope = models.TextField(blank=True, null=True)
     policy_statements = models.TextField(blank=True, null=True)
     responsibilities = models.TextField(blank=True, null=True)
-    procedures = models.TextField(blank=True, null=True)
 
     # Related policies as a many-to-many field
     related_policies = models.ManyToManyField("self", blank=True, symmetrical=False, related_name="related_to")
@@ -90,6 +89,7 @@ class Policy(models.Model):
         verbose_name = "Policy"  # Singular form
         verbose_name_plural = "Policies"  # Plural form
 
+
 # Represents individual procedure steps linked to a policy
 class ProcedureStep(models.Model):
     policy = models.ForeignKey('Policy', on_delete=models.CASCADE, related_name='procedure_steps')
@@ -98,9 +98,11 @@ class ProcedureStep(models.Model):
 
     class Meta:
         ordering = ['step_number']  # Steps will be ordered by their step number
+        unique_together = ('policy', 'step_number')  # Ensure unique step numbers within a policy
 
     def __str__(self):
         return f"Step {self.step_number}: {self.description[:50]}"
+
 
 # Represents definitions linked to policies
 class Definition(models.Model):

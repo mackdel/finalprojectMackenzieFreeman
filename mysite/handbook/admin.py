@@ -22,8 +22,11 @@ class DepartmentHeadAdminSite(admin.AdminSite):
     # Only allow users with the department head role
     def has_permission(self, request):
         if not request.user.is_authenticated:
-            return False  # Prevent access for unauthenticated users
-        return request.user.is_department_head()
+            return False
+        if request.user.is_department_head():
+            # Ensure the user has view permissions for ProcedureStep and Definition
+            return request.user.has_perm('handbook.view_procedurestep') and request.user.has_perm('handbook.view_definition')
+        return False
 
 department_head_admin = DepartmentHeadAdminSite(name="department_head_admin")
 
@@ -34,11 +37,31 @@ class ProcedureStepInline(admin.TabularInline):
     extra = 1  # Start with one empty row for adding steps
     ordering = ['step_number']  # Order steps by their number
 
+    def has_add_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
+
 
 # Inline configuration for Definitions in Policies
-class DefinitionInline(admin.StackedInline):
-    model = Definition.policies.through  # Many-to-Many relationship with Policies
-    extra = 1
+class DefinitionInline(admin.TabularInline):
+    model = Policy.definitions.through
+    extra = 1  # Start with one empty row for adding definitions
+    verbose_name = "Definition"
+    verbose_name_plural = "Definitions"
+
+    def has_add_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_department_head() or request.user.is_superuser
 
 
 # Admin configuration for Policy model
@@ -70,6 +93,8 @@ class PolicyAdmin(admin.ModelAdmin):
 
 # Department Head Configuration of Policy Model
 class PolicyAdminForDepartmentHead(PolicyAdmin):
+    inlines = [ProcedureStepInline, DefinitionInline]
+
     # Allow access to this model in the admin for department heads
     def has_module_permission(self, request):
         return request.user.is_department_head()
@@ -99,8 +124,8 @@ class PolicyAdminForDepartmentHead(PolicyAdmin):
     # Restrict policies to those belonging to the department head's department
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_department_head():
-            return qs.filter(policy_owner=request.user.department)
+        if request.user.is_department_head() and request.user.department:
+            qs = qs.filter(policy_owner=request.user.department)
         return qs
 
 
@@ -162,12 +187,58 @@ class PolicyRequestAdminForDepartmentHead(PolicyRequestAdmin):
         return qs
 
 
+# Admin configuration for Definition model
+class DefinitionAdmin(admin.ModelAdmin):
+    fieldsets = [
+        ("Definition Details", {
+            "fields": ['term', 'definition']
+        }),
+    ]
+    list_display = ('term_display', 'definition_display')
+    search_fields = ('term', 'definition')
+    ordering = ('term',)
+
+    # Display the term
+    def term_display(self, obj):
+        return obj.term
+
+    term_display.short_description = "Term"
+
+    # Display the definition
+    def definition_display(self, obj):
+        return obj.definition[:75] + "..." if len(obj.definition) > 75 else obj.definition
+
+    definition_display.short_description = "Definition"
+
+
+# Admin configuration for Policy Section model
+class PolicySectionAdmin(admin.ModelAdmin):
+    fieldsets = [
+        ("Policy Section Details", {
+            "fields": ['number', 'title']
+        }),
+    ]
+    list_display = ('number_display', 'title_display')
+    search_fields = ('number', 'title')
+    ordering = ('number',)
+
+    # Display the policy section number
+    def number_display(self, obj):
+        return obj.number
+
+    number_display.short_description = "Section Number"
+
+    # Display the policy section title
+    def title_display(self, obj):
+        return obj.title
+
+    title_display.short_description = "Section Title"
 
 
 # Register handbook models to super admin
-super_admin_site.register(PolicySection)
+super_admin_site.register(PolicySection, PolicySectionAdmin)
 super_admin_site.register(Policy, PolicyAdmin)
-super_admin_site.register(Definition)
+super_admin_site.register(Definition, DefinitionAdmin)
 super_admin_site.register(PolicyRequest, PolicyRequestAdmin)
 
 # Register accounts models to super admin

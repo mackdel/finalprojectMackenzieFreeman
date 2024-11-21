@@ -1,3 +1,6 @@
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from handbook.models import ProcedureStep, Definition
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -45,22 +48,8 @@ class CustomUser(AbstractUser):
         return self.role == self.ADMIN
 
     def save(self, *args, **kwargs):
+        if self.is_department_head() and not self.department:
+            raise ValueError("Department heads must have a department assigned.")
         super().save(*args, **kwargs)
-        # Assign permissions when role is department head
-        if self.is_department_head():
-            from django.contrib.auth.models import Permission
-            from django.contrib.contenttypes.models import ContentType
-            from handbook.models import Policy, PolicyRequest
 
-            # Get content types for models
-            policy_ct = ContentType.objects.get_for_model(Policy)
-            policy_request_ct = ContentType.objects.get_for_model(PolicyRequest)
 
-            # Get permissions
-            view_policy = Permission.objects.get(codename='view_policy', content_type=policy_ct)
-            change_policy = Permission.objects.get(codename='change_policy', content_type=policy_ct)
-            view_request = Permission.objects.get(codename='view_policyrequest', content_type=policy_request_ct)
-            change_request = Permission.objects.get(codename='change_policyrequest', content_type=policy_request_ct)
-
-            # Add permissions
-            self.user_permissions.add(view_policy, change_policy, view_request, change_request)
