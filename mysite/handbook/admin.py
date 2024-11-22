@@ -60,6 +60,15 @@ class DefinitionInline(admin.TabularInline):
     verbose_name = "Definition"
     verbose_name_plural = "Definitions"
 
+    # Restrict the available definitions to those related to the department head's policies.
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "definition":
+            if request.user.is_department_head():
+                kwargs["queryset"] = Definition.objects.filter(
+                    policies__policy_owner=request.user.department
+                ).distinct()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def has_add_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser
 
@@ -242,6 +251,39 @@ class DefinitionAdmin(admin.ModelAdmin):
     definition_display.short_description = "Definition"
 
 
+# Department Head configuration for Definition model
+class DefinitionAdminForDepartmentHead(DefinitionAdmin):
+    # Restrict queryset to definitions related to policies owned by the department
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_department_head():
+            return qs.filter(policies__policy_owner=request.user.department).distinct()
+        return qs
+
+    # Allow only view, create, and edit permissions for department heads
+    def has_view_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
+        return super().has_view_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        if not request.user.is_authenticated:
+            return False
+        if request.user.is_department_head():
+            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
+        return super().has_change_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return request.user.is_department_head() or super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        if request.user.is_department_head():
+            return False  # Department heads cannot delete definitions
+        return super().has_delete_permission(request, obj)
+
+
 # Admin configuration for Policy Section model
 class PolicySectionAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -279,3 +321,4 @@ super_admin_site.register(Department, DepartmentAdmin)
 # Register models with the department head admin site
 department_head_admin.register(Policy, PolicyAdminForDepartmentHead)
 department_head_admin.register(PolicyRequest, PolicyRequestAdminForDepartmentHead)
+department_head_admin.register(Definition, DefinitionAdminForDepartmentHead)
