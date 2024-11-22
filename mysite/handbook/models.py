@@ -64,7 +64,21 @@ class Policy(models.Model):
     )
     version = models.CharField(max_length=10)  # For tracking policy version
     pub_date = models.DateField("Date Created", auto_now_add=True)
-    review_period = models.CharField(max_length=50, blank=True, null=True)  # E.g., 'Annually'
+
+    REVIEW_PERIOD_CHOICES = [
+        ('Monthly', 'Monthly'),
+        ('Quarterly', 'Quarterly'),
+        ('Annually', 'Annually'),
+        ('Bi-Annually', 'Bi-Annually'),
+        ('Biennially', 'Biennially'),
+    ]
+    review_period = models.CharField(
+        max_length=50,
+        choices=REVIEW_PERIOD_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Select the review period for this policy."
+    )
 
     def __str__(self):
         return f"{self.number} {self.title}"

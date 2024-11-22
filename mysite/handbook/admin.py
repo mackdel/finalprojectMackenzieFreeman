@@ -82,7 +82,7 @@ class PolicyAdmin(admin.ModelAdmin):
             "fields": ["related_policies"]
         }),
     ]
-    readonly_fields = ["number", "pub_date"]  # Fields that should not be editable
+    readonly_fields = ["section", "number", "policy_owner", "pub_date", "version"]  # Fields that should not be editable
     list_display = ["number", "title", "section", "policy_owner", "pub_date", "version"]
     list_filter = ["section", "policy_owner", "pub_date"]
     search_fields = ["title", "policy_statements", "section__title"]
