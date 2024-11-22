@@ -112,10 +112,18 @@ class ProcedureStep(models.Model):
 
     class Meta:
         ordering = ['step_number']  # Steps will be ordered by their step number
-        unique_together = ('policy', 'step_number')  # Ensure unique step numbers within a policy
 
     def __str__(self):
         return f"Step {self.step_number}: {self.description[:50]}"
+
+    def save(self, *args, **kwargs):
+        # Automatically assign step numbers if not set.
+        if not self.pk:  # New instance
+            max_step = ProcedureStep.objects.filter(policy=self.policy).aggregate(models.Max('step_number'))[
+                           'step_number__max'
+                       ] or 0
+            self.step_number = max_step + 1
+        super().save(*args, **kwargs)
 
 
 # Represents definitions linked to policies

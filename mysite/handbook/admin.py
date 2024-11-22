@@ -34,8 +34,10 @@ department_head_admin = DepartmentHeadAdminSite(name="department_head_admin")
 # Inline configuration for Procedure Steps in Policies
 class ProcedureStepInline(admin.TabularInline):
     model = ProcedureStep
+    fields = ['step_number', 'description']
     extra = 1  # Start with one empty row for adding steps
     ordering = ['step_number']  # Order steps by their number
+    can_delete = True
 
     def has_add_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser
@@ -45,6 +47,10 @@ class ProcedureStepInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser
+
+    # Ensure steps are always ordered correctly in the admin.
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by('step_number')
 
 
 # Inline configuration for Definitions in Policies
@@ -89,6 +95,31 @@ class PolicyAdmin(admin.ModelAdmin):
     ordering = ["section", "number"]
     filter_horizontal = ["related_policies"]  # Horizontal widget for managing related policies
     inlines = [ProcedureStepInline, DefinitionInline]
+
+    # Handle saving, renumbering, and deletions for ProcedureStep in a policy.
+    def save_formset(self, request, form, formset, change):
+        if formset.model == ProcedureStep:
+            # Iterate through formset forms
+            for form in formset.forms:
+                if form.cleaned_data.get('DELETE', False):
+                    # Delete the object if marked for deletion
+                    obj = form.instance
+                    obj.delete()
+
+            # Save the remaining objects
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.save()
+
+            # Renumber remaining steps
+            steps = ProcedureStep.objects.filter(policy=form.instance.policy).order_by('step_number')
+            for index, step in enumerate(steps, start=1):
+                step.step_number = index
+                step.save(update_fields=['step_number'])
+
+            formset.save_m2m()  # Save many-to-many relationships
+        else:
+            formset.save()
 
 
 # Department Head Configuration of Policy Model
