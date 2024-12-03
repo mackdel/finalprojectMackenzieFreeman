@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>Major Change Questionnaire for {{ policy.number }} {{ policy.title }}</h1>
+  <p>Please check all that apply:</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Submit</button>
+    <a href="{% url 'admin:handbook_policy_changelist' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+{% endblock %}
+

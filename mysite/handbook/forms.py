@@ -1,6 +1,26 @@
 from django import forms
 from .models import PolicyRequest
 
+
+class MajorChangeQuestionnaireForm(forms.Form):
+    operational_impact = forms.BooleanField(
+        label="This policy affects operations across the enterprise",
+        required=False
+    )
+    compliance_impact = forms.BooleanField(
+        label="The policy being changed to address compliance risks or meet regulatory requirements",
+        required=False
+    )
+    financial_impact = forms.BooleanField(
+        label="The policy change could have financial implications for the company or its employees",
+        required=False
+    )
+    technology_impact = forms.BooleanField(
+        label="The policy change involves replacing, upgrading, or implementing a technology system",
+        required=False
+    )
+
+
 class PolicyRequestForm(forms.ModelForm):
     class Meta:
         model = PolicyRequest

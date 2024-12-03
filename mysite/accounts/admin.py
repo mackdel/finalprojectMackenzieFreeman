@@ -26,23 +26,37 @@ class DepartmentAdmin(admin.ModelAdmin):
             "fields": ("name",),
         }),
         ("Department Details", {
-            "fields": ("view_department_heads", "view_department_employees"),
+            "fields": ("view_executives_or_heads", "view_department_employees"),
         })
     )
     list_display = ("name",)
     search_fields = ("name",)
     ordering = ("name",)
-    readonly_fields = ("view_department_heads", "view_department_employees")
+    readonly_fields = ("view_executives_or_heads", "view_department_employees")
 
-    def view_department_heads(self, obj):
-        heads = obj.users.filter(role=CustomUser.DEPARTMENT_HEAD)
-        if heads.exists():
-            # Create a clickable link for each department head
-            return format_html("<br>".join([
-                f'<a href="{reverse("super_admin:accounts_customuser_change", args=[user.id])}">{user.first_name} {user.last_name}</a>'
-                for user in heads
-            ]))
-        return "None"
+    def view_executives_or_heads(self, obj):
+        if obj.name.lower() == "executive":
+            # Display executives for the Executive Department
+            executives = obj.users.filter(role=CustomUser.EXECUTIVE)
+            if executives.exists():
+                # Create a clickable link for each executive
+                return format_html("<br>".join([
+                    f'<a href="{reverse("super_admin:accounts_customuser_change", args=[user.id])}">'
+                    f"{user.first_name} {user.last_name}</a>"
+                    for user in executives
+                ]))
+            return "None"
+        else:
+            # Display department heads for other departments
+            heads = obj.users.filter(role=CustomUser.DEPARTMENT_HEAD)
+            if heads.exists():
+                # Create a clickable link for each dept head
+                return format_html("<br>".join([
+                    f'<a href="{reverse("super_admin:accounts_customuser_change", args=[user.id])}">'
+                    f"{user.first_name} {user.last_name}</a>"
+                    for user in heads
+                ]))
+            return "None"
 
     def view_department_employees(self, obj):
         employees = obj.users.filter(role=CustomUser.EMPLOYEE)
@@ -54,5 +68,5 @@ class DepartmentAdmin(admin.ModelAdmin):
             ]))
         return "None"
 
-    view_department_heads.short_description = "Department Heads"
+    view_executives_or_heads.short_description = "Executives / Department Heads"
     view_department_employees.short_description = "Employees"

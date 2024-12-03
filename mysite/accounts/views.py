@@ -22,6 +22,8 @@ class RoleBasedLoginView(LoginView):
             return reverse('super_admin:index')  # Redirect super admin to their dashboard
         elif user.is_department_head():
             return reverse('department_head_admin:index')  # Redirect department head to their portal
+        elif user.is_executive():
+            return reverse('executive_admin:index')  # Redirect executives to their portal
         elif user.is_employee():
             return '/handbook/'  # Redirect employees to the handbook
         else:

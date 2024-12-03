@@ -64,6 +64,7 @@ class Policy(models.Model):
     )
     version = models.CharField(max_length=10)  # For tracking policy version
     pub_date = models.DateField("Date Created", auto_now_add=True)
+    published = models.BooleanField(default=False)
 
     REVIEW_PERIOD_CHOICES = [
         ('Monthly', 'Monthly'),
@@ -97,6 +98,7 @@ class Policy(models.Model):
             policy_count = Policy.objects.filter(section=self.section).count()
             # Generate the policy number
             self.number = f"{section_prefix}.{policy_count + 1}"
+        print(f"Policy Save Triggered: {self}")
         super().save(*args, **kwargs)
 
     class Meta:
@@ -138,6 +140,98 @@ class Definition(models.Model):
         verbose_name = "Definition"  # Singular form
         verbose_name_plural = "Definitions"  # Plural form
 
+
+# Represents requests for policy approval on edits/creations/archives
+class PolicyApprovalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('revision_needed', 'Revision Needed'),
+        ('rejected', 'Rejected'),
+    ]
+
+    # Main policy reference
+    policy = models.ForeignKey(
+        Policy,
+        on_delete=models.CASCADE,
+        related_name='approval_requests',
+    )
+    # Metadata for the request
+    submitter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='submitted_requests',
+    )
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_requests',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    notes = models.TextField(blank=True, null=True)  # Notes for revision/rejection
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Proposed changes (duplicate policy fields)
+    proposed_title = models.CharField(max_length=200, blank=True, null=True)
+    proposed_purpose = models.TextField(blank=True, null=True)
+    proposed_scope = models.TextField(blank=True, null=True)
+    proposed_policy_statements = models.TextField(blank=True, null=True)
+    proposed_responsibilities = models.TextField(blank=True, null=True)
+    proposed_related_policies = models.JSONField(default=list, blank=True)
+    proposed_procedure_steps = models.JSONField(default=list, blank=True)
+    proposed_definitions = models.JSONField(default=list, blank=True)
+
+    # Get current policy details for admin display
+    @property
+    def current_title(self):
+        return self.policy.title
+
+    @property
+    def current_purpose(self):
+        return self.policy.purpose
+
+    @property
+    def current_scope(self):
+        return self.policy.scope
+
+    @property
+    def current_policy_statements(self):
+        return self.policy.policy_statements
+
+    @property
+    def current_responsibilities(self):
+        return self.policy.responsibilities
+
+    @property
+    def current_related_policies(self):
+        return self.policy.related_policies.all()
+
+    @property
+    def current_procedure_steps(self):
+        return ProcedureStep.objects.filter(policy=self.policy).order_by("step_number")
+
+    @property
+    def current_definitions(self):
+        return self.policy.definitions.all()
+
+    def save(self, *args, **kwargs):
+        # On creation, populate the duplicate fields only if not already provided
+        if not self.pk:
+            self.proposed_title = self.proposed_title or self.policy.title
+            self.proposed_purpose = self.proposed_purpose or self.policy.purpose
+            self.proposed_scope = self.proposed_scope or self.policy.scope
+            self.proposed_policy_statements = self.proposed_policy_statements or self.policy.policy_statements
+            self.proposed_related_policies = self.proposed_related_policies
+            self.proposed_definitions = self.proposed_definitions
+            self.proposed_procedure_steps = self.proposed_procedure_steps or list(ProcedureStep.objects.filter(policy=self.policy).values("id", "step_number", "description"))
+            self.proposed_definitions = self.proposed_definitions or self.policy.definitions
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Request for Policy: {self.policy.number} - Status: {self.get_status_display()}"
 
 # Represents request forms on each policy
 class PolicyRequest(models.Model):

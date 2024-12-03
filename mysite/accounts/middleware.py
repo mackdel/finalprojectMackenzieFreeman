@@ -25,6 +25,8 @@ class RoleRedirectMiddleware:
             # Redirect based on role
             if request.user.is_superuser and not request.path.startswith(reverse('super_admin:index')):
                 return redirect('super_admin:index')
+            elif request.user.is_executive() and not request.path.startswith(reverse('executive_admin:index')):
+                return redirect('executive_admin:index')
             elif request.user.is_department_head() and not request.path.startswith(reverse('department_head_admin:index')):
                 return redirect('department_head_admin:index')
             elif request.user.is_employee() and not request.path.startswith('/handbook/'):
