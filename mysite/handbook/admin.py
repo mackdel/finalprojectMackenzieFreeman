@@ -8,49 +8,59 @@ from accounts.admin import CustomUserAdmin, DepartmentAdmin
 from .utils import send_mailgun_email
 from django.core.exceptions import ValidationError
 
+"""
+Custom admin sites for different user roles (Super Admins, Executives, Department Heads).
+Each site is tailored to match the permissions and views required by the respective roles.
+"""
+
 # Custom Admin site for Super Admins
 class SuperAdminSite(admin.AdminSite):
+    # Define the headers and titles for the admin portal
     site_header = "Handbook Admin Portal"
     site_title = "Handbook Site Admin"
     index_title = "Welcome to the Handbook Admin Dashboard"
-    site_url = "/handbook/"
+    site_url = "/handbook/" # Default URL for the handbook site
 
+# Instantiate the SuperAdminSite
 super_admin_site = SuperAdminSite(name="super_admin")
 
 
 # Custom Admin site for Executives
 class ExecutiveAdminSite(admin.AdminSite):
+    # Define the headers and titles for the executive portal
     site_header = "Executive Portal"
     site_title = "Executive Site Admin"
     index_title = "Welcome to the Executive Dashboard"
     site_url = "/handbook/"
 
-    # Only allow users with the executive role
+    # Restrict access to only authenticated executive users
     def has_permission(self, request):
         if not request.user.is_authenticated:
             return False
-        # Allow access if the user is an executive
         return request.user.is_executive()
 
+# Instantiate the ExecutiveAdminSite
 executive_admin_site = ExecutiveAdminSite(name="executive_admin")
 
 
 # Custom Admin site for Department Heads
 class DepartmentHeadAdminSite(admin.AdminSite):
+    # Define the headers and titles for the department head portal
     site_header = "Department Head Portal"
     site_title = "Department Head Site Admin"
     index_title = "Welcome to the Department Head Dashboard"
     site_url = "/handbook/"
 
-    # Only allow users with the department head role
+    # Restrict access to authenticated users with the department head role
     def has_permission(self, request):
         if not request.user.is_authenticated:
             return False
         if request.user.is_department_head():
-            # Ensure the user has view permissions for ProcedureStep and Definition
+            # Ensure department heads have permissions to view procedure steps and definitions
             return request.user.has_perm('handbook.view_procedurestep') and request.user.has_perm('handbook.view_definition')
         return False
 
+# Instantiate the DepartmentHeadAdminSite
 department_head_admin = DepartmentHeadAdminSite(name="department_head_admin")
 
 
@@ -58,32 +68,35 @@ department_head_admin = DepartmentHeadAdminSite(name="department_head_admin")
 class ProcedureStepInline(admin.TabularInline):
     model = ProcedureStep
     fields = ['step_number', 'description']
-    extra = 0
-    ordering = ['step_number']  # Order steps by their number
-    can_delete = True
+    extra = 0  # Do not show extra rows for adding steps by default
+    ordering = ['step_number']  # Ensure steps are ordered by their number
+    can_delete = True # Allow deletion of steps
 
+    # Permissions to add procedure steps
     def has_add_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser or request.user.is_executive()
 
+    # Permissions to edit procedure steps
     def has_change_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser or request.user.is_executive()
 
+    # Permissions to delete procedure steps
     def has_delete_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser or request.user.is_executive()
 
-    # Ensure steps are always ordered correctly in the admin.
+    # Customize the queryset to ensure steps are always ordered by step number
     def get_queryset(self, request):
         return super().get_queryset(request).order_by('step_number')
 
 
 # Inline configuration for Definitions in Policies
 class DefinitionInline(admin.TabularInline):
-    model = Policy.definitions.through
-    extra = 1  # Start with one empty row for adding definitions
-    verbose_name = "Definition"
-    verbose_name_plural = "Definitions"
+    model = Policy.definitions.through # Many-to-Many relationship through model
+    extra = 1  # Show one empty row for adding definitions
+    verbose_name = "Definition" # Label for a single definition
+    verbose_name_plural = "Definitions" # Label for multiple definitions
 
-    # Restrict the available definitions to those related to the department head's policies.
+    # Restrict available definitions to those related to department head's policies
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "definition":
             if request.user.is_department_head():
@@ -92,18 +105,22 @@ class DefinitionInline(admin.TabularInline):
                 ).distinct()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    # Permissions to add definitions
     def has_add_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser or request.user.is_executive()
 
+    # Permissions to edit definitions
     def has_change_permission(self, request, obj=None):
         return request.user.is_department_head() or request.user.is_superuser or request.user.is_executive()
 
+    # Permissions to delete definitions
     def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
+        return request.user.is_superuser or request.user.is_superuser or request.user.is_executive()
 
 
 # Admin configuration for Policy model
 class PolicyAdmin(admin.ModelAdmin):
+    # Define sections for editing policies
     fieldsets = [
         ("Policy Information", {
             "fields": ["section", "title", "number", "version", "policy_owner", "pub_date", "review_period"]
@@ -124,52 +141,69 @@ class PolicyAdmin(admin.ModelAdmin):
     list_display = ["number", "title", "section", "policy_owner", "pub_date", "version"]
     list_filter = ["section", "policy_owner", "pub_date"]
     search_fields = ["title", "policy_statements", "section__title"]
-    ordering = ["section", "number"]
+    ordering = ["section", "number"]  # Default ordering of policies
     filter_horizontal = ["related_policies"]  # Horizontal widget for managing related policies
+
+    # Inline models for editing procedure steps and definitions
     inlines = [ProcedureStepInline, DefinitionInline]
 
-    # Save the policy model
+    # Save the policy model without immediately committing to the database
     def save_model(self, request, obj, form, change):
         if change:
-            # Check if there are unsaved changes
+            # Capture unsaved changes to policy fields
             unsaved_changes = {}
 
-            # Get changes to the policy fields
+            # Loop through all form fields and capture changes
             for field, value in form.cleaned_data.items():
+                # Check if the field exists on the policy model
                 if hasattr(obj, field):
                     field_obj = obj._meta.get_field(field)
+                    # For ForeignKey fields, store the primary key
                     if isinstance(field_obj, models.ForeignKey):
                         value = value.pk if value else None
+                    # For ManyToMany fields, store the list of related IDs
                     elif isinstance(field_obj, models.ManyToManyField):
                         value = list(value.values_list("id", flat=True))
+                    # Store the updated field value in the unsaved_changes
                     unsaved_changes[field] = value
 
-            # Temporarily store the basic changes
+            # Save changes to the session for further handling
             request.session["unsaved_policy_basic_changes"] = unsaved_changes
-            request.session["policy_id"] = obj.id
+            request.session["policy_id"] = obj.id # Save the policy ID for reference
 
             print("Save Model", unsaved_changes)
 
-        # Skip saving for now
+        # Do not save changes to the database yet
         return
 
-    # Save inline-related changes into the session but avoid applying them
+    # Save related changes (related policies, procedure steps, definitions) into the session without applying them
     def save_related(self, request, form, formsets, change):
-        # Save related policies
+        # Retrieve the policy ID from the session
         policy_id = request.session.get("policy_id")
         if policy_id:
+            # Fetch the policy object based on the policy ID
             policy = Policy.objects.get(id=policy_id)
+
+            # Retrieve any basic changes saved in the session for the policy
             unsaved_changes = request.session.get("unsaved_policy_basic_changes", {})
 
+            # Capture the list of related policies from the form data or use the existing related policies
             related_policies = form.cleaned_data.get("related_policies", policy.related_policies.all())
+            # Store the related policy IDs in the unsaved_changes
             unsaved_changes["related_policies"] = list(related_policies.values_list("id", flat=True))
 
-            # Save procedures and defintion chnages
-            procedure_steps = []
-            definitions = []
+            procedure_steps = [] # To store all procedure step changes
+            definitions = [] # To store all definition changes
+
+            # Iterate over all formsets to handle specific inline models
             for formset in formsets:
+                # Handle procedure steps
                 if formset.model == ProcedureStep:
+                    updated_steps = [] # Temporarily store updated steps
+
+                    # Iterate over each form in the procedure steps formset
                     for form in formset.forms:
+                        # If a step is marked for deletion, include it in the procedure_steps with DELETE flag
                         if form.cleaned_data.get("DELETE", False):
                             obj = form.instance
                             procedure_steps.append({
@@ -178,38 +212,51 @@ class PolicyAdmin(admin.ModelAdmin):
                                 "description": obj.description,
                                 "DELETE": True,
                             })
+                        # Else include step in the procedure_steps with normal data
                         else:
-                            instance = form.save(commit=False)
-                            if instance.description:
-                                if not instance.pk:
-                                    instance.policy = form.instance.policy
-                                    instance.save()
-                                procedure_steps.append({
-                                    "id": instance.id,
-                                    "step_number": instance.step_number,
-                                    "description": instance.description,
+                            instance = form.instance
+                            if instance.description: # Ensure meaningful data exists
+                                updated_steps.append(instance)
+
+                    # Sort updated steps by step number and renumber them in memory
+                    updated_steps.sort(key=lambda x: x.step_number)
+                    for index, step in enumerate(updated_steps, start=1):
+                        procedure_steps.append({
+                            "id": step.id,
+                            "step_number": index,  # Renumbered step number
+                            "description": step.description,
+                        })
+
+                # Handle definitions
+                elif formset.model == Policy.definitions.through:
+                    # Iterate over each form in the definitions formset
+                    for form in formset.forms:
+                        definition_instance = form.cleaned_data.get("definition") # Retrieve the definition object
+                        if definition_instance:
+                            # If marked for deletion, include it with the DELETE flag
+                            if form.cleaned_data.get("DELETE", False):
+                                definitions.append({
+                                    "id": definition_instance.id,
+                                    "term": definition_instance.term,
+                                    "definition": definition_instance.definition,
+                                    "DELETE": True,
+                                })
+                            # Else add the definition data to the unsaved changes
+                            else:
+                                definitions.append({
+                                    "id": definition_instance.id,
+                                    "term": definition_instance.term,
+                                    "definition": definition_instance.definition,
                                 })
 
-                elif formset.model == Policy.definitions.through:
-                    for form in formset.forms:
-                        definition_instance = form.cleaned_data.get("definition")
-                        if definition_instance and not form.cleaned_data.get("DELETE", False):
-                            definitions.append({
-                                "id": definition_instance.id,
-                                "term": definition_instance.term,
-                                "definition": definition_instance.definition,
-                            })
-
-            # Update unsaved changes for procedure steps and definitions
+            # Update session with changes
             unsaved_changes["procedure_steps"] = procedure_steps
             unsaved_changes["definitions"] = definitions
-
-            # Save unsaved changes to session
             request.session["unsaved_policy_changes"] = unsaved_changes
 
             print("Save Related", unsaved_changes)
 
-        # Do not commit related changes to the database yet
+        # Do not save changes to the database yet
         return
 
     # Redirects to the major change questionnaire when saving an edited policy
@@ -222,10 +269,12 @@ class PolicyAdmin(admin.ModelAdmin):
     # Construct a change message that avoids accessing new_objects
     def construct_change_message(self, request, form, formsets, add=False):
         change_message = []
+
+        # Capture changed fields in the form
         if form.changed_data:
             change_message.append(f"Changed fields: {', '.join(form.changed_data)}")
 
-        # Custom handling for formsets
+        # Handle changes in formsets
         for formset in formsets:
             if hasattr(formset, 'deleted_forms') and formset.deleted_forms:
                 change_message.append(f"Deleted {len(formset.deleted_forms)} inline(s).")
@@ -238,19 +287,20 @@ class PolicyAdmin(admin.ModelAdmin):
             return "Added new object."
         return " ".join(change_message) if change_message else "No changes detected."
 
+
 # Executive Configuration of Policy Model
 class PolicyAdminForExecutive(PolicyAdmin):
     inlines = [ProcedureStepInline, DefinitionInline]
 
-    # Allow access to this model in the admin for executives
+    # Grant module access only to executives
     def has_module_permission(self, request):
         return request.user.is_executive()
 
-    # Allow editing policies
+    # Grant module access only to executives
     def has_change_permission(self, request, obj=None):
         return request.user.is_executive()
 
-    # Allow adding policies
+    # Allow executives to add new policies
     def has_add_permission(self, request):
         return request.user.is_executive()
 
@@ -267,28 +317,29 @@ class PolicyAdminForExecutive(PolicyAdmin):
 class PolicyAdminForDepartmentHead(PolicyAdmin):
     inlines = [ProcedureStepInline, DefinitionInline]
 
-    # Allow access to this model in the admin for department heads
+    # Grant module access only to department heads
     def has_module_permission(self, request):
         return request.user.is_department_head()
 
-    # Department heads can only view policies within their department
+    # Allow department heads to view policies within their department
     def has_view_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj is None or obj.policy_owner == request.user.department
         return super().has_view_permission(request, obj)
 
-    # Department heads can only change policies within their department
+    # Allow department heads to edit policies within their department
     def has_change_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj and obj.policy_owner == request.user.department
         return super().has_change_permission(request, obj)
 
-    # Department heads can only add policies within their department
+    # Allow department heads to add policies to their department
     def has_add_permission(self, request):
         return request.user.is_department_head()
 
-    # Custom list_filter for department heads
+    # Customize the list filter for department heads
     def get_list_filter(self, request):
+        # Limit to only filter by section and publish date
         if request.user.is_department_head():
             return ('section', 'pub_date')
         return super().get_list_filter(request)
@@ -311,18 +362,18 @@ class PolicyRequestAdmin(admin.ModelAdmin):
             "fields": ('is_resolved', 'admin_notes')
         }),
     ]
-    readonly_fields = ('policy', 'first_name', 'last_name', 'email', 'question', 'submitted_at')  # Non-editable fields
+    readonly_fields = ('policy', 'first_name', 'last_name', 'email', 'question', 'submitted_at')
     list_display = ('policy', 'first_name', 'last_name', 'email', 'submitted_at', 'is_resolved')
     list_filter = ('is_resolved', 'submitted_at', 'policy__section')
     search_fields = ('first_name', 'last_name', 'email', 'question', 'policy__title', 'policy__section__title')
-    ordering = ('-submitted_at',)  # Order by the most recent submissions
-    actions = ['mark_requests_resolved']
+    ordering = ('-submitted_at',)  # Default ordering: newest submissions first
 
-    # Mark selected requests as resolved.
+    actions = ['mark_requests_resolved'] # Custom admin action
+    # Custom admin action to mark selected requests as resolved
     def mark_requests_resolved(self, request, queryset):
-        count = queryset.update(is_resolved=True)
-        self.message_user(request, f"{count} request(s) marked as resolved.")
-
+        count = queryset.update(is_resolved=True) # Update the is_resolved field for selected requests
+        self.message_user(request, f"{count} request(s) marked as resolved.") # Display a success message
+    # Description for the action
     mark_requests_resolved.short_description = "Mark selected requests as resolved"
 
     # Prevent adding new Policy Requests manually
@@ -332,22 +383,23 @@ class PolicyRequestAdmin(admin.ModelAdmin):
 
 # Department Head Configuration of Policy Request model
 class PolicyRequestAdminForDepartmentHead(PolicyRequestAdmin):
+    # Grant module access only to department heads
     def has_module_permission(self, request):
         return request.user.is_department_head()
 
-    # Department heads can only view requests for policies within their department
+    # Allow department heads to view requests for their department's policies
     def has_view_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj is None or obj.policy.policy_owner == request.user.department
         return super().has_view_permission(request, obj)
 
-    # Department heads can only change requests for policies within their department
+    # Allow department heads to resolve requests for their department's policies
     def has_change_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj and obj.policy.policy_owner == request.user.department
         return super().has_change_permission(request, obj)
 
-    # Restrict requests to those related to policies within the department head's department
+    # Restrict queryset to requests related to policies within the department head's department
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_department_head():
@@ -362,38 +414,38 @@ class DefinitionAdmin(admin.ModelAdmin):
             "fields": ['term', 'definition']
         }),
     ]
-    list_display = ('term_display', 'definition_display')
-    search_fields = ('term', 'definition')
-    ordering = ('term',)
+    list_display = ['term_display', 'definition_display']
+    search_fields = ['term', 'definition']
+    ordering = ['term',] # Default ordering: alphabetically by term
 
-    # Display the term
+    # Display the term in the list view
     def term_display(self, obj):
         return obj.term
-
+    # Label for the column
     term_display.short_description = "Term"
 
-    # Display the definition
+    # Display a shortened version of the definition in the list view
     def definition_display(self, obj):
         return obj.definition[:75] + "..." if len(obj.definition) > 75 else obj.definition
-
+    # Label for the column
     definition_display.short_description = "Definition"
 
 
 # Executive configuration for Definition model
 class DefinitionAdminForExecutive(DefinitionAdmin):
-    # Allow access to this model in the admin for executives
+    # Grant module access only to executives
     def has_module_permission(self, request):
         return request.user.is_executive()
 
-    # Executives can view all definitions
+    # Allow executives to view all definitions
     def get_queryset(self, request):
         return super().get_queryset(request)
 
-    # Allow adding definitions
+    # Allow executives to add new definitions
     def has_add_permission(self, request):
         return request.user.is_executive()
 
-    # Allow editing of definitions
+    # Allow executives to edit definitions
     def has_change_permission(self, request, obj=None):
         return request.user.is_executive()
 
@@ -411,20 +463,23 @@ class DefinitionAdminForDepartmentHead(DefinitionAdmin):
             return qs.filter(policies__policy_owner=request.user.department).distinct()
         return qs
 
-    # Allow only view, create, and edit permissions for department heads
+    # Allow department heads to view definitions linked to their department's policies
     def has_view_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
         return super().has_view_permission(request, obj)
 
+    # Allow department heads to edit definitions linked to their department's policies
     def has_change_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
         return super().has_change_permission(request, obj)
 
+    # Allow department heads to add definitions
     def has_add_permission(self, request):
         return request.user.is_department_head()
 
+    # Restrict department heads from deleting definitions
     def has_delete_permission(self, request, obj=None):
         return False
 
@@ -436,20 +491,20 @@ class PolicySectionAdmin(admin.ModelAdmin):
             "fields": ['number', 'title']
         }),
     ]
-    list_display = ('number_display', 'title_display')
-    search_fields = ('number', 'title')
-    ordering = ('number',)
+    list_display = ['number_display', 'title_display']
+    search_fields = ['number', 'title']
+    ordering = ['number',] # Default ordering: numerically by section number
 
-    # Display the policy section number
+    # Display the section number in the list view
     def number_display(self, obj):
         return obj.number
-
+    # Label for the column
     number_display.short_description = "Section Number"
 
-    # Display the policy section title
+    # Display the section title in the list view
     def title_display(self, obj):
         return obj.title
-
+    # Label for the column
     title_display.short_description = "Section Title"
 
 
@@ -470,24 +525,24 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         }),
         ("Proposed Changes", {
             "fields": [
-                "proposed_title",
-                "proposed_purpose",
-                "proposed_scope",
-                "proposed_policy_statements",
-                "proposed_responsibilities",
-                "proposed_related_policies",
-                "proposed_procedure_steps",
-                "proposed_definitions",
+                "get_proposed_title",
+                "get_proposed_purpose",
+                "get_proposed_scope",
+                "get_proposed_policy_statements",
+                "get_proposed_responsibilities",
+                "get_proposed_related_policies",
+                "get_proposed_procedure_steps",
+                "get_proposed_definitions",
             ],
         }),
         ("Approval Details", {
             "fields": ("status", "notes", "approver", "submitted_at", "updated_at"),
         }),
     ]
-    list_display = ("policy", "status", "submitter", "approver", "submitted_at", "updated_at")
-    list_filter = ("status", "submitted_at", "updated_at")
-    ordering = ("-submitted_at",)
-    readonly_fields = (
+    list_display = ["policy", "status", "submitter", "approver", "submitted_at", "updated_at"]
+    list_filter = ["status", "submitted_at", "updated_at"]
+    ordering = ["-submitted_at",]
+    readonly_fields = [
         "policy",
         "submitter",
         "approver",
@@ -501,20 +556,22 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         "current_related_policies",
         "current_procedure_steps",
         "current_definitions",
-        "proposed_title",
-        "proposed_purpose",
-        "proposed_scope",
-        "proposed_policy_statements",
-        "proposed_responsibilities",
-        "proposed_related_policies",
-        "proposed_procedure_steps",
-        "proposed_definitions",
-    )
+        "get_proposed_title",
+        "get_proposed_purpose",
+        "get_proposed_scope",
+        "get_proposed_policy_statements",
+        "get_proposed_responsibilities",
+        "get_proposed_related_policies",
+        "get_proposed_procedure_steps",
+        "get_proposed_definitions",
+    ]
 
+    # Allow only executives to change approval requests
     def has_change_permission(self, request, obj=None):
         return request.user.is_executive()
 
     # Computed fields for the current policy
+    # These methods retrieve and display data from the current policy associated with the approval request
     def current_title(self, obj):
         return obj.policy.title
 
@@ -531,16 +588,20 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         return obj.policy.responsibilities
 
     def current_related_policies(self, obj):
-        return ", ".join([str(policy) for policy in obj.current_related_policies]) or "None"
+        # Format the related policies as a list
+        return "\n".join([str(policy) for policy in obj.policy.related_policies.all()]) or "None"
 
     def current_procedure_steps(self, obj):
+        # Format procedure steps as a numbered list
         return "\n".join(
-            [f"Step {step.step_number}: {step.description}" for step in obj.current_procedure_steps]
+            [f"Step {step.step_number}: {step.description}" for step in ProcedureStep.objects.filter(policy=obj.policy).order_by("step_number")]
         ) or "None"
 
     def current_definitions(self, obj):
+        # Format definitions as a list of terms with their corresponding definitions
         return "\n".join(
-            [f"{definition.term}: {definition.definition}" for definition in obj.current_definitions]) or "None"
+            [f"{definition.term}: {definition.definition}" for definition in obj.policy.definitions.all()]
+        ) or "None"
 
     # Short descriptions for the current policy fields
     current_title.short_description = "Current Title"
@@ -552,47 +613,51 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     current_procedure_steps.short_description = "Current Procedure Steps"
     current_definitions.short_description = "Current Definitions"
 
-    # Dynamic fields for the changes
-    def proposed_title(self, obj):
+    # Computed fields for the proposed changes
+    # These methods retrieve and display the proposed changes submitted with the approval request
+    def get_proposed_title(self, obj):
         return obj.proposed_title or "No Change"
 
-    def proposed_purpose(self, obj):
+    def get_proposed_purpose(self, obj):
         return obj.proposed_purpose or "No Change"
 
-    def proposed_scope(self, obj):
+    def get_proposed_scope(self, obj):
         return obj.proposed_scope or "No Change"
 
-    def proposed_policy_statements(self, obj):
+    def get_proposed_policy_statements(self, obj):
         return obj.proposed_policy_statements or "No Change"
 
-    def proposed_responsibilities(self, obj):
+    def get_proposed_responsibilities(self, obj):
         return obj.proposed_responsibilities or "No Change"
 
-    def proposed_related_policies(self, obj):
+    def get_proposed_related_policies(self, obj):
+        # Format the proposed related policies as a list
         policies = Policy.objects.filter(id__in=obj.proposed_related_policies)
-        return ", ".join(str(policy) for policy in policies) if policies else "No Change"
+        return "\n".join(str(policy) for policy in policies) if policies else "No Change"
 
-    def proposed_procedure_steps(self, obj):
+    def get_proposed_procedure_steps(self, obj):
+        # Format proposed procedure steps as a numbered list
         return "\n".join(
             f"Step {step['step_number']}: {step['description']}"
             for step in obj.proposed_procedure_steps
         ) if obj.proposed_procedure_steps else "No Change"
 
-    def proposed_definitions(self, obj):
+    def get_proposed_definitions(self, obj):
+        # Format proposed definitions as a list of terms with their corresponding definitions
         return "\n".join(
             f"{definition['term']}: {definition['definition']}"
             for definition in obj.proposed_definitions
         ) if obj.proposed_definitions else "No Change"
 
     # Short descriptions for the proposed changes
-    proposed_title.short_description = "Proposed Title"
-    proposed_purpose.short_description = "Proposed Purpose"
-    proposed_scope.short_description = "Proposed Scope"
-    proposed_policy_statements.short_description = "Proposed Policy Statements"
-    proposed_responsibilities.short_description = "Proposed Responsibilities"
-    proposed_related_policies.short_description = "Proposed Related Policies"
-    proposed_procedure_steps.short_description = "Proposed Procedure Steps"
-    proposed_definitions.short_description = "Proposed Definitions"
+    get_proposed_title.short_description = "Proposed Title"
+    get_proposed_purpose.short_description = "Proposed Purpose"
+    get_proposed_scope.short_description = "Proposed Scope"
+    get_proposed_policy_statements.short_description = "Proposed Policy Statements"
+    get_proposed_responsibilities.short_description = "Proposed Responsibilities"
+    get_proposed_related_policies.short_description = "Proposed Related Policies"
+    get_proposed_procedure_steps.short_description = "Proposed Procedure Steps"
+    get_proposed_definitions.short_description = "Proposed Definitions"
 
     # Handle status changes
     def save_model(self, request, obj, form, change):
@@ -610,11 +675,16 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
             # Notify submitter if the request requires revision or is rejected
             elif obj.status in ["revision_needed", "rejected"]:
                 self.notify_submitter(obj)
+
+        # Save the changes
         super().save_model(request, obj, form, change)
 
+    # Notify the submitter about the status of their request
     def notify_submitter(self, obj):
         submitter_email = obj.submitter.email
+        # Determine the status message
         status_message = "revision needed" if obj.status == "revision_needed" else "rejected"
+        # Send email notification to the submitter
         send_mailgun_email(
             to_email=submitter_email,
             subject=f"Policy Change Request {status_message.capitalize()}",

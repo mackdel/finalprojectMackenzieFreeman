@@ -11,6 +11,11 @@ from .models import PolicySection, Policy, PolicyApprovalRequest, ProcedureStep,
 from .forms import PolicyRequestForm, MajorChangeQuestionnaireForm
 from .utils import send_mailgun_email
 
+"""
+Handles views for the handbook application, including homepage, policy sections, 
+policy requests, and major policy change processing.
+"""
+
 # Home page view: Displays the homepage for authenticated users
 class IndexView(LoginRequiredMixin, TemplateView):
     template_name = "handbook/index.html"
@@ -64,10 +69,13 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         context['success'] = self.request.GET.get('success', False)
         return context
 
+    # Save the form and associate it with the specific policy
     def form_valid(self, form):
-        # Save the form and associate it with the specific policy
+        # Get the policy related to the form
         policy = get_object_or_404(Policy, number=self.kwargs['policy_number'])
         policy_request = form.save(commit=False)
+
+        # Attach additional details to the request
         policy_request.policy = policy
         policy_request.name = f"{self.request.user.first_name} {self.request.user.last_name}"
         policy_request.email = self.request.user.email
@@ -96,7 +104,7 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
             variables=variables,
         )
 
-        # Redirect to the same page with success=True
+        # Redirect back to the same page with a success message
         success_url = f"{self.get_success_url()}?success=True"
         return HttpResponseRedirect(success_url)
 
@@ -110,13 +118,15 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
     def get_success_url(self):
         return reverse("admin:handbook_policy_changelist")
 
-    # Process form submission
+    #  Process the form and determine if a major change request is needed
     def form_valid(self, form):
+        # Get the policy related to the form
         policy = get_object_or_404(Policy, id=self.kwargs["policy_id"])
+
         unsaved_changes = self.request.session.get("unsaved_policy_changes", {})
         print("Views", unsaved_changes)
 
-        # Check for major chnage
+        # Check if any major impacts are identified
         is_major_change = any([
             form.cleaned_data.get("operational_impact", False),
             form.cleaned_data.get("compliance_impact", False),
@@ -125,8 +135,10 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
         ])
 
         if is_major_change:
+            # Create a policy approval request if major changes are detected
             self.create_policy_approval_request(policy, unsaved_changes)
         else:
+            # Apply changes directly for minor updates
             self.apply_changes(policy, unsaved_changes)
 
         # Clear session after handling changes
@@ -134,18 +146,17 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
         self.request.session.pop("policy_id", None)
         return redirect(self.get_success_url())
 
-    def create_policy_approval_request(self, policy, unsaved_changes):
-        procedure_steps = []
-        for step in unsaved_changes.get("procedure_steps", []):
-            # Exclude steps marked for deletion from proposed changes
-            if not step.get("DELETE"):
-                procedure_steps.append({
-                    "id": step.get("id"),
-                    "step_number": step.get("step_number"),
-                    "description": step.get("description"),
-                })
 
-        # Handles major changes by creating a PolicyApprovalRequest
+    # Create a PolicyApprovalRequest to handle major policy changes
+    def create_policy_approval_request(self, policy, unsaved_changes):
+        procedure_steps = [
+            step for step in unsaved_changes.get("procedure_steps", []) if not step.get("DELETE")
+        ]
+        definitions = [
+            definition for definition in unsaved_changes.get("definitions", []) if not definition.get("DELETE")
+        ]
+
+        # Save the approval request to the database
         PolicyApprovalRequest.objects.create(
             policy=policy,
             submitter=self.request.user,
@@ -157,19 +168,23 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
             proposed_responsibilities=unsaved_changes.get("responsibilities", policy.responsibilities),
             proposed_related_policies=unsaved_changes.get("related_policies", []),
             proposed_procedure_steps=procedure_steps,
-            proposed_definitions=unsaved_changes.get("definitions", []),
+            proposed_definitions=definitions,
         )
+        # Inform the user about the submission
         messages.warning(
             self.request,
             f"Major change detected for policy {policy.number} {policy.title}. Approval request submitted.",
         )
 
+    # Directly apply minor changes to the policy
     def apply_changes(self, policy, unsaved_changes):
         for field, value in unsaved_changes.items():
             if field == "related_policies":
+                # Update related policies
                 policy.related_policies.set(value)
             elif field == "procedure_steps":
-                policy.procedure_steps.all().delete()  # Clear existing steps
+                # Clear existing procedure steps and add new ones
+                policy.procedure_steps.all().delete()
                 for step in value:
                     if not step.get("DELETE"):  # Skip deleted steps
                         ProcedureStep.objects.create(
@@ -178,10 +193,14 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
                             description=step["description"],
                         )
             elif field == "definitions":
+                # Clear existing definitions and associate new ones
                 policy.definitions.clear()
-                definitions_to_add = Definition.objects.filter(id__in=[d["id"] for d in value])
-                policy.definitions.set(definitions_to_add)
+                for definition in value:
+                    if not definition.get("DELETE"): # Skip deleted steps
+                        definition_instance = Definition.objects.get(id=definition["id"])
+                        policy.definitions.add(definition_instance)
             else:
+                # Handle other fields, including ForeignKey and ManyToMany
                 field_obj = policy._meta.get_field(field)
                 if isinstance(field_obj, ForeignKey):
                     value = field_obj.remote_field.model.objects.filter(pk=value).first() if value else None
@@ -198,7 +217,7 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
             f"Changes to {policy.number} {policy.title} have been saved as a minor change.",
         )
 
-    # Handle invalid questionnaire submission
+    # Handle invalid form submissions by displaying an error message
     def form_invalid(self, form):
         messages.error(self.request, "Please complete the questionnaire.")
         return self.render_to_response(self.get_context_data(form=form))
