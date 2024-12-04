@@ -178,6 +178,10 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
 
     # Directly apply minor changes to the policy
     def apply_changes(self, policy, unsaved_changes):
+        major, minor = map(int, policy.version.split('.'))
+        minor += 1
+        policy.version = f"{major}.{minor}"
+
         for field, value in unsaved_changes.items():
             if field == "related_policies":
                 # Update related policies

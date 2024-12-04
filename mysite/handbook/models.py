@@ -165,11 +165,21 @@ class PolicyApprovalRequest(models.Model):
         ('revision_needed', 'Revision Needed'),
         ('rejected', 'Rejected'),
     ]
-    # Main policy reference
+
+    # Options for request type
+    REQUEST_TYPE_CHOICES = [
+        ('new', 'New Policy'),
+        ('edit', 'Edit Policy'),
+        ('archive', 'Archive Policy'),
+    ]
+
+    # Main policy reference (optional for new policy requests)
     policy = models.ForeignKey(
-        Policy,
+        'Policy',
         on_delete=models.CASCADE,
         related_name='approval_requests',
+        null=True,
+        blank=True,
     )
     # User who submitted policy approval request
     submitter = models.ForeignKey(
@@ -186,12 +196,26 @@ class PolicyApprovalRequest(models.Model):
         related_name='approved_requests',
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending') # Default pending status if new request
+    request_type = models.CharField(max_length=10,choices=REQUEST_TYPE_CHOICES,default='edit')
     notes = models.TextField(blank=True, null=True)  # Notes for revision/rejection
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Fields for policy (read-only or editable based on request type)
+    section = models.ForeignKey(PolicySection, on_delete=models.CASCADE, related_name="approval_requests")
+    number = models.CharField(max_length=10, blank=True, null=True)
+    policy_owner = models.ForeignKey(
+        'accounts.Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    version = models.CharField(max_length=10, blank=True, null=True)
+
     # Proposed changes for policy fields
     proposed_title = models.CharField(max_length=200, blank=True, null=True)
+    proposed_review_period = models.CharField(max_length=50, choices=Policy.REVIEW_PERIOD_CHOICES, blank=True,
+                                              null=True)
     proposed_purpose = models.TextField(blank=True, null=True)
     proposed_scope = models.TextField(blank=True, null=True)
     proposed_policy_statements = models.TextField(blank=True, null=True)
@@ -200,73 +224,88 @@ class PolicyApprovalRequest(models.Model):
     proposed_procedure_steps = models.JSONField(default=list, blank=True)
     proposed_definitions = models.JSONField(default=list, blank=True)
 
-    # Populate duplicate fields for proposed changes if they aren't explicitly provided
+    # Automatically populate fields for edits
     def save(self, *args, **kwargs):
-        # Only populate fields when creating a new instance
-        if not self.pk:
+        if self.request_type == 'edit' and self.policy:
+            self.section = self.policy.section
+            self.number = self.policy.number
+            self.policy_owner = self.policy.policy_owner
             self.proposed_title = self.proposed_title or self.policy.title
+            self.proposed_review_period = self.proposed_review_period or self.policy.review_period
             self.proposed_purpose = self.proposed_purpose or self.policy.purpose
             self.proposed_scope = self.proposed_scope or self.policy.scope
             self.proposed_policy_statements = self.proposed_policy_statements or self.policy.policy_statements
             self.proposed_related_policies = self.proposed_related_policies
-            self.proposed_definitions = self.proposed_definitions
             self.proposed_procedure_steps = self.proposed_procedure_steps or list(ProcedureStep.objects.filter(policy=self.policy).values("id", "step_number", "description"))
             self.proposed_definitions = self.proposed_definitions or self.policy.definitions
         super().save(*args, **kwargs)
 
     # Apply the proposed changes to the main policy and update associated steps/definitions
     def apply_changes(self):
-        self.policy.title = self.proposed_title
-        self.policy.purpose = self.proposed_purpose
-        self.policy.scope = self.proposed_scope
-        self.policy.policy_statements = self.proposed_policy_statements
-        self.policy.responsibilities = self.proposed_responsibilities
-        self.policy.related_policies.set(self.proposed_related_policies)
+        if self.request_type == 'new':
+            # Create a new Policy object
+            new_policy = Policy.objects.create(
+                section=self.section,
+                title=self.proposed_title,
+                version="1.0",
+                policy_owner=self.policy_owner,
+                review_period=self.proposed_review_period,
+                purpose=self.proposed_purpose,
+                scope=self.proposed_scope,
+                policy_statements=self.proposed_policy_statements,
+                responsibilities=self.proposed_responsibilities,
+            )
+            new_policy.related_policies.set(Policy.objects.filter(id__in=self.proposed_related_policies))
 
-        # Update Procedure Steps
-        existing_steps = list(self.policy.procedure_steps.values("id", "step_number", "description"))
-        proposed_steps = self.proposed_procedure_steps
-
-        # Loop through each proposed step
-        for step in proposed_steps:
-            step_id = step.get("id")
-            if step_id:
-                # Update existing procedure step with new data
-                ProcedureStep.objects.filter(id=step_id).update(
+            for step in self.proposed_procedure_steps:
+                ProcedureStep.objects.create(
+                    policy=new_policy,
                     step_number=step["step_number"],
                     description=step["description"],
                 )
-            else:
-                # Create a new procedure step if it doesn't already exist
+            for definition in self.proposed_definitions:
+                new_policy.definitions.add(Definition.objects.get(id=definition["id"]))
+            new_policy.save()
+            self.policy = new_policy
+            self.save()
+        elif self.request_type == 'edit' and self.policy:
+            # Update existing policy
+            self.policy.version = self.version
+            self.policy.title = self.proposed_title
+            self.policy.review_period = self.proposed_review_period
+            self.policy.purpose = self.proposed_purpose
+            self.policy.scope = self.proposed_scope
+            self.policy.policy_statements = self.proposed_policy_statements
+            self.policy.responsibilities = self.proposed_responsibilities
+            self.policy.related_policies.set(self.proposed_related_policies)
+
+            # Update version for major change
+            major, minor = map(int, self.policy.version.split('.'))
+            major += 1
+            minor = 0
+            self.policy.version = f"{major}.{minor}"
+
+            # Delete existing Procedure Steps and replace with new ones
+            self.policy.procedure_steps.all().delete()
+            for step in self.proposed_procedure_steps:
                 ProcedureStep.objects.create(
                     policy=self.policy,
                     step_number=step["step_number"],
                     description=step["description"],
                 )
 
-        # Identify which steps should be deleted
-        existing_ids = {step["id"] for step in existing_steps}
-        proposed_ids = {step.get("id") for step in proposed_steps if step.get("id")}
-        ProcedureStep.objects.filter(id__in=(existing_ids - proposed_ids)).delete()
+            # Remove all current definitions and add new ones
+            self.policy.definitions.clear()
+            for definition in self.proposed_definitions:
+                definition_instance = Definition.objects.get(id=definition["id"])
+                self.policy.definitions.add(definition_instance)
 
-        # Update Definitions
-        current_definition_ids = set(self.policy.definitions.values_list("id", flat=True))
-        proposed_definition_ids = {definition["id"] for definition in self.proposed_definitions}
-
-        # Add new definitions that aren't already linked to the policy
-        new_definition_ids = proposed_definition_ids - current_definition_ids
-        self.policy.definitions.add(*new_definition_ids)
-
-        # Remove definitions that are no longer part of the proposed changes
-        old_definition_ids = current_definition_ids - proposed_definition_ids
-        self.policy.definitions.remove(*old_definition_ids)
-
-        # Save the updated policy
-        self.policy.save()
+            # Save the updated policy
+            self.policy.save()
 
     # Display the approval request with the policy number and status
     def __str__(self):
-        return f"Request for Policy: {self.policy.number} - Status: {self.get_status_display()}"
+        return f"Request to {self.request_type} policy - Status: {self.get_status_display()}"
 
 
 # Represents request forms on each policy

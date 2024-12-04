@@ -1,7 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.http import HttpResponseRedirect
-from django.contrib import admin
+from django.contrib import admin, messages
 from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep, PolicyApprovalRequest
 from accounts.models import CustomUser, Department
 from accounts.admin import CustomUserAdmin, DepartmentAdmin
@@ -137,7 +137,7 @@ class PolicyAdmin(admin.ModelAdmin):
             "fields": ["related_policies"]
         }),
     ]
-    readonly_fields = ["number", "pub_date", "version"]
+    readonly_fields = ["number", "pub_date", "version", "policy_owner",]
     list_display = ["number", "title", "section", "policy_owner", "pub_date", "version"]
     list_filter = ["section", "policy_owner", "pub_date"]
     search_fields = ["title", "policy_statements", "section__title"]
@@ -149,7 +149,29 @@ class PolicyAdmin(admin.ModelAdmin):
 
     # Save the policy model without immediately committing to the database
     def save_model(self, request, obj, form, change):
-        if change:
+        if not change:
+            # Manually generate the policy number without saving the Policy object
+            section_prefix = obj.section.number.split(".")[0]
+            policy_count = Policy.objects.filter(section=obj.section).count()
+            obj.number = f"{section_prefix}.{policy_count + 1}"
+            obj.policy_owner = request.user.department
+
+            # Save unsaved changes to the session for creating a PolicyApprovalRequest
+            unsaved_changes = {
+                "section": obj.section.id,
+                "number": obj.number,
+                "title": form.cleaned_data["title"],
+                "policy_owner": obj.policy_owner.id if obj.policy_owner else None,
+                "review_period": form.cleaned_data["review_period"],
+                "purpose": form.cleaned_data["purpose"],
+                "scope": form.cleaned_data["scope"],
+                "policy_statements": form.cleaned_data["policy_statements"],
+                "responsibilities": form.cleaned_data["responsibilities"],
+            }
+            request.session["is_policy_creation"] = True
+            # Store unsaved changes in the session
+            request.session["unsaved_policy_changes"] = unsaved_changes
+        else:
             # Capture unsaved changes to policy fields
             unsaved_changes = {}
 
@@ -167,94 +189,126 @@ class PolicyAdmin(admin.ModelAdmin):
                     # Store the updated field value in the unsaved_changes
                     unsaved_changes[field] = value
 
-            # Save changes to the session for further handling
-            request.session["unsaved_policy_basic_changes"] = unsaved_changes
-            request.session["policy_id"] = obj.id # Save the policy ID for reference
+            request.session["policy_id"] = obj.id
 
-            print("Save Model", unsaved_changes)
+            # Store unsaved changes in the session
+            request.session["unsaved_policy_changes"] = unsaved_changes
+
+        print("Save Model", "Create" if not change else "Edit", unsaved_changes)
 
         # Do not save changes to the database yet
         return
 
     # Save related changes (related policies, procedure steps, definitions) into the session without applying them
     def save_related(self, request, form, formsets, change):
-        # Retrieve the policy ID from the session
-        policy_id = request.session.get("policy_id")
-        if policy_id:
-            # Fetch the policy object based on the policy ID
-            policy = Policy.objects.get(id=policy_id)
+        if request.session.get("is_policy_creation", False):
+            unsaved_changes = request.session.get("unsaved_policy_changes", {})
 
-            # Retrieve any basic changes saved in the session for the policy
-            unsaved_changes = request.session.get("unsaved_policy_basic_changes", {})
+            # Capture related policies for a new policy
+            related_policies = form.cleaned_data.get("related_policies", [])
+            if related_policies:
+                # Store related policy IDs
+                unsaved_changes["related_policies"] = list(related_policies.values_list("id", flat=True))
 
-            # Capture the list of related policies from the form data or use the existing related policies
-            related_policies = form.cleaned_data.get("related_policies", policy.related_policies.all())
-            # Store the related policy IDs in the unsaved_changes
-            unsaved_changes["related_policies"] = list(related_policies.values_list("id", flat=True))
+            procedure_steps = []
+            definitions = []
 
-            procedure_steps = [] # To store all procedure step changes
-            definitions = [] # To store all definition changes
-
-            # Iterate over all formsets to handle specific inline models
             for formset in formsets:
-                # Handle procedure steps
                 if formset.model == ProcedureStep:
-                    updated_steps = [] # Temporarily store updated steps
-
-                    # Iterate over each form in the procedure steps formset
                     for form in formset.forms:
-                        # If a step is marked for deletion, include it in the procedure_steps with DELETE flag
-                        if form.cleaned_data.get("DELETE", False):
-                            obj = form.instance
+                        if not form.cleaned_data.get("DELETE", False):
                             procedure_steps.append({
-                                "id": obj.id,
-                                "step_number": obj.step_number,
-                                "description": obj.description,
-                                "DELETE": True,
+                                "step_number": form.cleaned_data["step_number"],
+                                "description": form.cleaned_data["description"],
                             })
-                        # Else include step in the procedure_steps with normal data
-                        else:
-                            instance = form.instance
-                            if instance.description: # Ensure meaningful data exists
-                                updated_steps.append(instance)
-
-                    # Sort updated steps by step number and renumber them in memory
-                    updated_steps.sort(key=lambda x: x.step_number)
-                    for index, step in enumerate(updated_steps, start=1):
-                        procedure_steps.append({
-                            "id": step.id,
-                            "step_number": index,  # Renumbered step number
-                            "description": step.description,
-                        })
-
-                # Handle definitions
                 elif formset.model == Policy.definitions.through:
-                    # Iterate over each form in the definitions formset
                     for form in formset.forms:
-                        definition_instance = form.cleaned_data.get("definition") # Retrieve the definition object
-                        if definition_instance:
-                            # If marked for deletion, include it with the DELETE flag
+                        definition = form.cleaned_data.get("definition")
+                        if definition and not form.cleaned_data.get("DELETE", False):
+                            definitions.append({
+                                "id": definition.id,
+                                "term": definition.term,
+                                "definition": definition.definition,
+                            })
+
+        else:
+            # Retrieve the policy ID from the session
+            policy_id = request.session.get("policy_id")
+            if policy_id:
+                # Fetch the policy object based on the policy ID
+                policy = Policy.objects.get(id=policy_id)
+
+                # Retrieve any basic changes saved in the session for the policy
+                unsaved_changes = request.session.get("unsaved_policy_changes", {})
+
+                # Capture the list of related policies from the form data or use the existing related policies
+                related_policies = form.cleaned_data.get("related_policies", policy.related_policies.all())
+                # Store the related policy IDs in the unsaved_changes
+                unsaved_changes["related_policies"] = list(related_policies.values_list("id", flat=True))
+
+                procedure_steps = [] # To store all procedure step changes
+                definitions = [] # To store all definition changes
+
+                # Iterate over all formsets to handle specific inline models
+                for formset in formsets:
+                    # Handle procedure steps
+                    if formset.model == ProcedureStep:
+                        updated_steps = [] # Temporarily store updated steps
+
+                        # Iterate over each form in the procedure steps formset
+                        for form in formset.forms:
+                            # If a step is marked for deletion, include it in the procedure_steps with DELETE flag
                             if form.cleaned_data.get("DELETE", False):
-                                definitions.append({
-                                    "id": definition_instance.id,
-                                    "term": definition_instance.term,
-                                    "definition": definition_instance.definition,
+                                obj = form.instance
+                                procedure_steps.append({
+                                    "id": obj.id,
+                                    "step_number": obj.step_number,
+                                    "description": obj.description,
                                     "DELETE": True,
                                 })
-                            # Else add the definition data to the unsaved changes
+                            # Else include step in the procedure_steps with normal data
                             else:
-                                definitions.append({
-                                    "id": definition_instance.id,
-                                    "term": definition_instance.term,
-                                    "definition": definition_instance.definition,
+                                instance = form.instance
+                                if instance.description: # Ensure meaningful data exists
+                                    updated_steps.append(instance)
+
+                        # Sort updated steps by step number and renumber them in memory
+                        updated_steps.sort(key=lambda x: x.step_number)
+                        for index, step in enumerate(updated_steps, start=1):
+                            procedure_steps.append({
+                                "id": step.id,
+                                "step_number": index,  # Renumbered step number
+                                "description": step.description,
+                            })
+
+                    # Handle definitions
+                    elif formset.model == Policy.definitions.through:
+                        # Iterate over each form in the definitions formset
+                        for form in formset.forms:
+                            definition_instance = form.cleaned_data.get("definition") # Retrieve the definition object
+                            if definition_instance:
+                                # If marked for deletion, include it with the DELETE flag
+                                if form.cleaned_data.get("DELETE", False):
+                                    definitions.append({
+                                        "id": definition_instance.id,
+                                        "term": definition_instance.term,
+                                        "definition": definition_instance.definition,
+                                        "DELETE": True,
+                                    })
+                                # Else add the definition data to the unsaved changes
+                                else:
+                                    definitions.append({
+                                        "id": definition_instance.id,
+                                        "term": definition_instance.term,
+                                        "definition": definition_instance.definition,
                                 })
 
-            # Update session with changes
-            unsaved_changes["procedure_steps"] = procedure_steps
-            unsaved_changes["definitions"] = definitions
-            request.session["unsaved_policy_changes"] = unsaved_changes
+        # Update session with changes
+        unsaved_changes["procedure_steps"] = procedure_steps
+        unsaved_changes["definitions"] = definitions
+        request.session["unsaved_policy_changes"] = unsaved_changes
 
-            print("Save Related", unsaved_changes)
+        print("Save Related", unsaved_changes)
 
         # Do not save changes to the database yet
         return
@@ -265,6 +319,39 @@ class PolicyAdmin(admin.ModelAdmin):
             questionnaire_url = reverse("handbook:major_change_questionnaire", kwargs={"policy_id": obj.id})
             return HttpResponseRedirect(questionnaire_url)
         return super().response_change(request, obj)
+
+    # Creates a PolicyApprovalRequest when a new policy is created
+    def response_add(self, request, obj, post_url_continue=None):
+        unsaved_changes = request.session.get("unsaved_policy_changes", {})
+        # Create a policy approval request for the new policy
+        self._create_policy_approval_request(request, unsaved_changes, request_type="new")
+        self.message_user(
+            request,
+            f"New policy '{unsaved_changes['title']} has been submitted for approval.",
+            level="success"
+        )
+
+        # Redirect to the policy change list
+        return HttpResponseRedirect(reverse("admin:handbook_policy_changelist"))
+
+    # Creates a PolicyApprovalRequest using the stored unsaved changes
+    def _create_policy_approval_request(self, request, unsaved_changes, request_type="edit"):
+        PolicyApprovalRequest.objects.create(
+            submitter=request.user,
+            request_type='new',
+            status="pending",
+            policy_owner=Department.objects.get(id=unsaved_changes["policy_owner"]),
+            section=PolicySection.objects.get(id=unsaved_changes["section"]),
+            proposed_title=unsaved_changes["title"],
+            proposed_review_period=unsaved_changes["review_period"],
+            proposed_purpose=unsaved_changes["purpose"],
+            proposed_scope=unsaved_changes["scope"],
+            proposed_policy_statements=unsaved_changes["policy_statements"],
+            proposed_responsibilities=unsaved_changes["responsibilities"],
+            proposed_related_policies=unsaved_changes.get("related_policies", []),
+            proposed_procedure_steps=unsaved_changes.get("procedure_steps", []),
+            proposed_definitions=unsaved_changes.get("definitions", []),
+        )
 
     # Construct a change message that avoids accessing new_objects
     def construct_change_message(self, request, form, formsets, add=False):
@@ -510,37 +597,19 @@ class PolicySectionAdmin(admin.ModelAdmin):
 
 # Executive configuration for Policy Approval Request
 class PolicyApprovalRequestAdmin(admin.ModelAdmin):
-    fieldsets = [
-        ("Current Policy", {
-            "fields": [
-                "current_title",
-                "current_purpose",
-                "current_scope",
-                "current_policy_statements",
-                "current_responsibilities",
-                "current_related_policies",
-                "current_procedure_steps",
-                "current_definitions",
-            ],
-        }),
-        ("Proposed Changes", {
-            "fields": [
-                "get_proposed_title",
-                "get_proposed_purpose",
-                "get_proposed_scope",
-                "get_proposed_policy_statements",
-                "get_proposed_responsibilities",
-                "get_proposed_related_policies",
-                "get_proposed_procedure_steps",
-                "get_proposed_definitions",
-            ],
-        }),
-        ("Approval Details", {
-            "fields": ("status", "notes", "approver", "submitted_at", "updated_at"),
-        }),
-    ]
-    list_display = ["policy", "status", "submitter", "approver", "submitted_at", "updated_at"]
-    list_filter = ["status", "submitted_at", "updated_at"]
+    list_display = ["get_policy_or_proposed_title", "request_type",  "status", "submitter", "approver", "submitted_at"]
+
+    # Determines the displayed field
+    def get_policy_or_proposed_title(self, obj):
+        if obj.request_type == 'new':
+            return obj.proposed_title or "No Title Proposed"
+        elif obj.request_type in ['edit', 'archive'] and obj.policy:
+            return obj.policy.title
+        return "No Policy Linked"
+
+    get_policy_or_proposed_title.short_description = "Policy"
+
+    list_filter = ["status", "request_type", "section", "submitted_at"]
     ordering = ["-submitted_at",]
     readonly_fields = [
         "policy",
@@ -548,6 +617,10 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         "approver",
         "submitted_at",
         "updated_at",
+        "section",
+        "policy_owner",
+        "current_review_period",
+        "current_version",
         "current_title",
         "current_purpose",
         "current_scope",
@@ -557,6 +630,7 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         "current_procedure_steps",
         "current_definitions",
         "get_proposed_title",
+        "get_proposed_review_period",
         "get_proposed_purpose",
         "get_proposed_scope",
         "get_proposed_policy_statements",
@@ -566,6 +640,63 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
         "get_proposed_definitions",
     ]
 
+    # Dynamically adjust fieldsets based on the `request_type` of the policy approval request
+    def get_fieldsets(self, request, obj=None):
+        base_fieldsets = [
+            ("Approval Details", {
+                "fields": ("status", "notes", "approver", "submitted_at", "updated_at"),
+            }),
+        ]
+
+        if obj:
+            if obj.request_type == "edit":
+                base_fieldsets.insert(0, ("Current Policy Details", {
+                    "fields": [
+                        "section",
+                        "current_title",
+                        "current_version",
+                        "policy_owner",
+                        "current_review_period",
+                        "current_purpose",
+                        "current_scope",
+                        "current_policy_statements",
+                        "current_responsibilities",
+                        "current_related_policies",
+                        "current_procedure_steps",
+                        "current_definitions",
+                    ],
+                }))
+                base_fieldsets.insert(1, ("Proposed Changes",  {
+                    "fields": [
+                        "get_proposed_title",
+                        "get_proposed_review_period",
+                        "get_proposed_purpose",
+                        "get_proposed_scope",
+                        "get_proposed_policy_statements",
+                        "get_proposed_responsibilities",
+                        "get_proposed_related_policies",
+                        "get_proposed_procedure_steps",
+                        "get_proposed_definitions",
+                    ],
+                }))
+            elif obj.request_type == "new":
+                base_fieldsets.insert(0, ("New Policy Details", {
+                    "fields": [
+                        "section",
+                        "get_proposed_title",
+                        "policy_owner",
+                        "get_proposed_review_period",
+                        "get_proposed_purpose",
+                        "get_proposed_scope",
+                        "get_proposed_policy_statements",
+                        "get_proposed_responsibilities",
+                        "get_proposed_related_policies",
+                        "get_proposed_procedure_steps",
+                        "get_proposed_definitions",
+                    ],
+                }))
+        return base_fieldsets
+
     # Allow only executives to change approval requests
     def has_change_permission(self, request, obj=None):
         return request.user.is_executive()
@@ -574,6 +705,12 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     # These methods retrieve and display data from the current policy associated with the approval request
     def current_title(self, obj):
         return obj.policy.title
+
+    def current_version(self, obj):
+        return obj.policy.version
+
+    def current_review_period(self, obj):
+        return obj.policy.review_period
 
     def current_purpose(self, obj):
         return obj.policy.purpose
@@ -605,6 +742,8 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
 
     # Short descriptions for the current policy fields
     current_title.short_description = "Current Title"
+    current_version.short_description = "Version"
+    current_review_period.short_description = "Current Review Period"
     current_purpose.short_description = "Current Purpose"
     current_scope.short_description = "Current Scope"
     current_policy_statements.short_description = "Current Policy Statements"
@@ -616,41 +755,45 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     # Computed fields for the proposed changes
     # These methods retrieve and display the proposed changes submitted with the approval request
     def get_proposed_title(self, obj):
-        return obj.proposed_title or "No Change"
+        return obj.proposed_title or "None"
 
     def get_proposed_purpose(self, obj):
-        return obj.proposed_purpose or "No Change"
+        return obj.proposed_purpose or "None"
 
     def get_proposed_scope(self, obj):
-        return obj.proposed_scope or "No Change"
+        return obj.proposed_scope or "None"
 
     def get_proposed_policy_statements(self, obj):
-        return obj.proposed_policy_statements or "No Change"
+        return obj.proposed_policy_statements or "None"
 
     def get_proposed_responsibilities(self, obj):
-        return obj.proposed_responsibilities or "No Change"
+        return obj.proposed_responsibilities or "None"
+
+    def get_proposed_review_period(self, obj):
+        return obj.proposed_review_period or "None"
 
     def get_proposed_related_policies(self, obj):
         # Format the proposed related policies as a list
         policies = Policy.objects.filter(id__in=obj.proposed_related_policies)
-        return "\n".join(str(policy) for policy in policies) if policies else "No Change"
+        return "\n".join(str(policy) for policy in policies) if policies else "None"
 
     def get_proposed_procedure_steps(self, obj):
         # Format proposed procedure steps as a numbered list
         return "\n".join(
             f"Step {step['step_number']}: {step['description']}"
             for step in obj.proposed_procedure_steps
-        ) if obj.proposed_procedure_steps else "No Change"
+        ) if obj.proposed_procedure_steps else "None"
 
     def get_proposed_definitions(self, obj):
         # Format proposed definitions as a list of terms with their corresponding definitions
         return "\n".join(
             f"{definition['term']}: {definition['definition']}"
             for definition in obj.proposed_definitions
-        ) if obj.proposed_definitions else "No Change"
+        ) if obj.proposed_definitions else "None"
 
     # Short descriptions for the proposed changes
     get_proposed_title.short_description = "Proposed Title"
+    get_proposed_review_period.short_description = "Proposed Review Period"
     get_proposed_purpose.short_description = "Proposed Purpose"
     get_proposed_scope.short_description = "Proposed Scope"
     get_proposed_policy_statements.short_description = "Proposed Policy Statements"
