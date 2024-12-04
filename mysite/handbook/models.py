@@ -1,4 +1,5 @@
-from django.db import models
+from django.db import models, transaction
+from django.db.models import JSONField
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
@@ -111,7 +112,6 @@ class Policy(models.Model):
             policy_count = Policy.objects.filter(section=self.section).count()
             # Generate the policy number
             self.number = f"{section_prefix}.{policy_count + 1}"
-        print(f"Policy Save Triggered: {self}")
         super().save(*args, **kwargs)
 
     class Meta:
@@ -173,10 +173,18 @@ class PolicyApprovalRequest(models.Model):
         ('archive', 'Archive Policy'),
     ]
 
-    # Main policy reference (optional for new policy requests)
+    # Main policy reference
     policy = models.ForeignKey(
         'Policy',
         on_delete=models.CASCADE,
+        related_name='approval_requests',
+        null=True,
+        blank=True,
+    )
+    # Archived policy reference
+    archived_policy = models.ForeignKey(
+        'ArchivedPolicy',
+        on_delete=models.SET_NULL,
         related_name='approval_requests',
         null=True,
         blank=True,
@@ -303,9 +311,81 @@ class PolicyApprovalRequest(models.Model):
             # Save the updated policy
             self.policy.save()
 
+        elif self.request_type == "archive" and self.policy:
+            with transaction.atomic():  # Ensure the operation is atomic
+                # Save the policy instance before making changes
+                section = self.policy.section  # Save the section for renumbering later
+                policy = self.policy
+
+                # Serialize procedure steps into a JSON field
+                procedure_steps_data = list(policy.procedure_steps.values('step_number', 'description'))
+
+                # Create an ArchivedPolicy instance from the Policy instance
+                archived_policy = ArchivedPolicy.objects.create(
+                    section=self.policy.section,
+                    number=self.policy.number,
+                    title=self.policy.title,
+                    version=self.policy.version,
+                    policy_owner=self.policy.policy_owner,
+                    review_period=self.policy.review_period,
+                    purpose=self.policy.purpose,
+                    scope=self.policy.scope,
+                    policy_statements=self.policy.policy_statements,
+                    responsibilities=self.policy.responsibilities,
+                )
+                # Move related data to the archived policy
+                archived_policy.related_policies.set(self.policy.related_policies.all())
+                archived_policy.definitions.set(self.policy.definitions.all())
+
+                # Attach the serialized procedure steps
+                archived_policy.procedure_steps_json = procedure_steps_data
+                archived_policy.save()
+
+                # Update the PolicyApprovalRequest to reference the archived policy
+                self.archived_policy = archived_policy
+                self.policy = None  # Clear the original policy reference
+                self.save()
+
+                # Delete the original policy
+                policy.delete()
+
+                # Renumber remaining policies in the same section
+                policies = Policy.objects.filter(section=section).order_by("number")
+                section_prefix = section.number.split(".")[0]
+                for i, remaining_policy in enumerate(policies, start=1):
+                    remaining_policy.number = f"{section_prefix}.{i}"
+                    remaining_policy.save()
+
+
     # Display the approval request with the policy number and status
     def __str__(self):
-        return f"Request to {self.request_type} policy - Status: {self.get_status_display()}"
+        if self.policy:
+            return f"Request to {self.request_type} policy: {self.policy.title}"
+        elif self.archived_policy:
+            return f"Archived {self.request_type} policy: {self.archived_policy.title}"
+        else:
+            return f"Request to create new policy: {self.proposed_title}"
+
+
+# Represents archived policies
+class ArchivedPolicy(models.Model):
+    section = models.ForeignKey(PolicySection, on_delete=models.CASCADE, related_name="archived_policies")
+    number = models.CharField(max_length=10)
+    title = models.CharField(max_length=200)
+    version = models.CharField(max_length=10)
+    policy_owner = models.ForeignKey('accounts.Department', on_delete=models.SET_NULL, null=True, blank=True)
+    review_period = models.CharField(max_length=50)
+    purpose = models.TextField()
+    scope = models.TextField()
+    policy_statements = models.TextField()
+    responsibilities = models.TextField()
+    archived_at = models.DateTimeField(auto_now_add=True)
+    related_policies = models.ManyToManyField("Policy", related_name="archived_related_policies", blank=True)
+    procedure_steps_json = JSONField(default=list, blank=True)
+    definitions = models.ManyToManyField("Definition", related_name="archived_policies", blank=True)
+
+    def __str__(self):
+        return f"{self.number} {self.title}"
 
 
 # Represents request forms on each policy

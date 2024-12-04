@@ -5,6 +5,7 @@ from .views import (
     SectionDetailView,
     PolicyRequestFormView,
     MajorChangeQuestionnaireView,
+    ArchivePolicyView
 )
 from accounts.views import UserProfileView
 
@@ -17,4 +18,5 @@ urlpatterns = [
     path("policy/<str:policy_number>/request", PolicyRequestFormView.as_view(), name="request_form"),
     path("profile/", UserProfileView.as_view(), name='user_profile'),
     path("major-change-questionnaire/<int:policy_id>/", MajorChangeQuestionnaireView.as_view(), name='major_change_questionnaire'),
+    path("policy/<int:policy_id>/archive/", ArchivePolicyView.as_view(), name="archive_policy"),
 ]

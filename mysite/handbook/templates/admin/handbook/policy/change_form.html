@@ -1,0 +1,8 @@
+{% extends "admin/change_form.html" %}
+
+{% block content %}
+    {{ block.super }}
+    {% if archive_url %}
+        <a href="{{ archive_url }}" class=" deletelink">Archive Policy</a>
+    {% endif %}
+{% endblock %}

@@ -1,6 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.db.models import ForeignKey, ManyToManyField
+from django.views import View
 from django.views.generic import TemplateView, ListView, DetailView
 from django.views.generic.edit import FormView
 from django.shortcuts import get_object_or_404, redirect
@@ -225,3 +226,26 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
     def form_invalid(self, form):
         messages.error(self.request, "Please complete the questionnaire.")
         return self.render_to_response(self.get_context_data(form=form))
+
+
+class ArchivePolicyView(View):
+    def get(self, request, policy_id, *args, **kwargs):
+        # Get the policy object
+        policy = get_object_or_404(Policy, id=policy_id)
+
+        # Create a PolicyApprovalRequest for archiving
+        PolicyApprovalRequest.objects.create(
+            policy=policy,
+            submitter=request.user,
+            request_type="archive",
+            status="pending",
+            section=policy.section,
+            policy_owner=policy.policy_owner,
+            version=policy.version,
+        )
+
+        # Add a success message
+        messages.success(request, f"Archive request for {policy.number} {policy.title} submitted successfully.")
+
+        # Redirect back to the policy change view
+        return redirect("admin:handbook_policy_change", object_id=policy_id)

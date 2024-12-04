@@ -2,7 +2,7 @@ from django.db import models
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.contrib import admin, messages
-from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep, PolicyApprovalRequest
+from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep, PolicyApprovalRequest, ArchivedPolicy
 from accounts.models import CustomUser, Department
 from accounts.admin import CustomUserAdmin, DepartmentAdmin
 from .utils import send_mailgun_email
@@ -146,6 +146,13 @@ class PolicyAdmin(admin.ModelAdmin):
 
     # Inline models for editing procedure steps and definitions
     inlines = [ProcedureStepInline, DefinitionInline]
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        # Add the archive button URL to the context
+        extra_context['archive_url'] = reverse('handbook:archive_policy', kwargs={'policy_id': object_id})
+        return super().change_view(request, object_id, form_url, extra_context)
+
 
     # Save the policy model without immediately committing to the database
     def save_model(self, request, obj, form, change):
@@ -605,6 +612,8 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
             return obj.proposed_title or "No Title Proposed"
         elif obj.request_type in ['edit', 'archive'] and obj.policy:
             return obj.policy.title
+        elif obj.archived_policy:
+            return obj.archived_policy.title
         return "No Policy Linked"
 
     get_policy_or_proposed_title.short_description = "Policy"
@@ -693,6 +702,23 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
                         "get_proposed_related_policies",
                         "get_proposed_procedure_steps",
                         "get_proposed_definitions",
+                    ],
+                }))
+            elif obj.request_type == "archive" and obj.status != "approved":
+                base_fieldsets.insert(0, ("Policy Details", {
+                    "fields": [
+                        "section",
+                        "current_title",
+                        "current_version",
+                        "policy_owner",
+                        "current_review_period",
+                        "current_purpose",
+                        "current_scope",
+                        "current_policy_statements",
+                        "current_responsibilities",
+                        "current_related_policies",
+                        "current_procedure_steps",
+                        "current_definitions",
                     ],
                 }))
         return base_fieldsets
@@ -839,6 +865,82 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
             },
         )
 
+# Admin configuration for Archived Policy
+class ArchivedPolicyAdmin(admin.ModelAdmin):
+    fieldsets = [
+        ("Archived Policy Details", {
+            "fields": (
+                'section',
+                'number',
+                'title',
+                'version',
+                'policy_owner',
+                'archived_at',
+                'review_period',
+                'purpose',
+                'scope',
+                'policy_statements',
+                'responsibilities',
+                'formatted_related_policies',
+                'formatted_procedure_steps',
+                'formatted_definitions',
+            )
+        }),
+    ]
+    list_display = ["number", "title", "section", "policy_owner", "archived_at"]
+    search_fields = ["title", "number", "section__title"]
+    list_filter = ["section", "archived_at"]
+    readonly_fields = [
+        'section',
+        'number',
+        'title',
+        'version',
+        'policy_owner',
+        'archived_at',
+        'review_period',
+        'purpose',
+        'scope',
+        'policy_statements',
+        'responsibilities',
+        'formatted_related_policies',
+        'formatted_procedure_steps',
+        'formatted_definitions',
+    ]
+
+    # Format Some Fields
+    def formatted_related_policies(self, obj):
+        related_policies = obj.related_policies.all()
+        if not related_policies:
+            return "None"
+        return "\n".join(str(policy) for policy in related_policies)
+
+    def formatted_procedure_steps(self, obj):
+        if not obj.procedure_steps_json:
+            return "None"
+        return "\n".join(
+            f"Step {step['step_number']}: {step['description']}"
+            for step in obj.procedure_steps_json
+        )
+
+    def formatted_definitions(self, obj):
+        definitions = obj.definitions.all()
+        if not definitions:
+            return "None"
+        return "\n".join(
+            f"{definition.term}: {definition.definition}" for definition in definitions
+        )
+
+    formatted_related_policies.short_description = "Related Policies"
+    formatted_procedure_steps.short_description = "Procedure Steps"
+    formatted_definitions.short_description = "Definitions"
+
+    # Restrict view and edit permissions
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_executive()
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
 
 # Register handbook models to super admin
 super_admin_site.register(PolicySection, PolicySectionAdmin)
@@ -854,6 +956,7 @@ super_admin_site.register(Department, DepartmentAdmin)
 executive_admin_site.register(Policy, PolicyAdminForExecutive)
 executive_admin_site.register(Definition, DefinitionAdminForExecutive)
 executive_admin_site.register(PolicyApprovalRequest, PolicyApprovalRequestAdmin)
+executive_admin_site.register(ArchivedPolicy, ArchivedPolicyAdmin)
 
 # Register models with the department head admin site
 department_head_admin.register(Policy, PolicyAdminForDepartmentHead)

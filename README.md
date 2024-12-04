@@ -80,7 +80,9 @@ Mackenzie Freeman
 Inspiration, code snippets, etc.
 * [Django Tutorial](https://docs.djangoproject.com/en/4.2/intro/tutorial01/)
 * [Django Docs](https://docs.djangoproject.com/en/5.1/)
+* [Django Admin](https://docs.djangoproject.com/en/5.1/ref/contrib/admin/)
 * [ChatGPT](https://chatgpt.com/share/672e6f74-59dc-800b-b531-281963cffbb1)
 * [BootStrap Docs](https://getbootstrap.com/docs/5.3/getting-started/introduction/)
 * [LearnDjango](https://learndjango.com/tutorials/django-login-and-logout-tutorial)
 * [Django-Anymail](https://github.com/anymail/django-anymail)
+* [Stack Overflow - Dharanidhar Reddy](https://stackoverflow.com/a/71084228)
