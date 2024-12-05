@@ -604,7 +604,7 @@ class PolicySectionAdmin(admin.ModelAdmin):
 
 # Admin configuration for Policy Approval Request
 class PolicyApprovalRequestAdmin(admin.ModelAdmin):
-    list_display = ["get_policy_or_proposed_title", "request_type",  "status", "submitter", "approver", "submitted_at"]
+    list_display = ["get_policy_or_proposed_title", "request_type",  "status", "submitter", "submitted_at"]
 
     # Determines the displayed field
     def get_policy_or_proposed_title(self, obj):
@@ -792,19 +792,6 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     get_proposed_procedure_steps.short_description = "Proposed Procedure Steps"
     get_proposed_definitions.short_description = "Proposed Definitions"
 
-    # Restrict view and edit permissions
-    def has_view_permission(self, request, obj=None):
-        return request.user.is_executive() or request.user.is_department_head()
-
-    def has_change_permission(self, request, obj=None):
-        if obj:
-            if request.user.is_executive():
-                if obj.submitter == request.user:
-                    return False # Cannot apporve of own policy
-                # Executives can edit requests they didn't submit unless approved/rejected
-                return obj.status not in ["approved", "rejected", "revision_needed"]
-        return super().has_change_permission(request, obj)
-
     # Handle status changes
     def save_model(self, request, obj, form, change):
         if change:
@@ -818,6 +805,36 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
 
         # Save the changes
         super().save_model(request, obj, form, change)
+
+
+# Executive configuration for Policy Approval Request
+class PolicyApprovalRequestAdminForExecutive(PolicyApprovalRequestAdmin):
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_executive()
+
+    def has_change_permission(self, request, obj=None):
+        if obj:
+            if request.user.is_executive():
+                if obj.submitter == request.user:
+                    return False  # Cannot apporve of own policy
+                # Executives can edit requests they didn't submit unless approved/rejected
+                return obj.status not in ["approved", "rejected", "revision_needed"]
+        return super().has_change_permission(request, obj)
+
+
+# Dept Head configuration for Policy Approval Request
+class PolicyApprovalRequestAdminForDeptHead(PolicyApprovalRequestAdmin):
+    # Filter queryset for department heads
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.filter(policy_owner=request.user.department)
+
+    # Allow viewing only if the request belongs to the user's department
+    def has_view_permission(self, request, obj=None):
+        return obj is None or obj.policy_owner == request.user.department
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 # Admin configuration for Archived Policy
@@ -910,10 +927,11 @@ super_admin_site.register(Department, DepartmentAdmin)
 # Register models with the executive admin site
 executive_admin_site.register(Policy, PolicyAdminForExecutive)
 executive_admin_site.register(Definition, DefinitionAdminForExecutive)
-executive_admin_site.register(PolicyApprovalRequest, PolicyApprovalRequestAdmin)
+executive_admin_site.register(PolicyApprovalRequest, PolicyApprovalRequestAdminForExecutive)
 executive_admin_site.register(ArchivedPolicy, ArchivedPolicyAdmin)
 
 # Register models with the department head admin site
 department_head_admin.register(Policy, PolicyAdminForDepartmentHead)
 department_head_admin.register(PolicyRequest, PolicyRequestAdminForDepartmentHead)
 department_head_admin.register(Definition, DefinitionAdminForDepartmentHead)
+department_head_admin.register(PolicyApprovalRequest, PolicyApprovalRequestAdminForDeptHead)
