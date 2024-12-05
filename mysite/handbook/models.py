@@ -285,7 +285,7 @@ class PolicyApprovalRequest(models.Model):
             self.save()
         elif self.request_type == 'edit' and self.policy:
             # Update existing policy
-            self.policy.version = self.version
+            self.policy.version = self.policy.version
             self.policy.title = self.proposed_title
             self.policy.review_period = self.proposed_review_period
             self.policy.purpose = self.proposed_purpose
