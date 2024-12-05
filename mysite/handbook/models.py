@@ -146,6 +146,13 @@ class ProcedureStep(models.Model):
 class Definition(models.Model):
     term = models.CharField(max_length=100)
     definition = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_definitions"
+    )
 
     # Display the definition term and a truncated version of its description
     def __str__(self):
@@ -366,6 +373,10 @@ class PolicyApprovalRequest(models.Model):
         else:
             return f"Request to create new policy: {self.proposed_title}"
 
+    class Meta:
+        verbose_name = "Policy Approval Request"  # Singular form
+        verbose_name_plural = "Policy Approval Requests"  # Plural form
+
 
 # Represents archived policies
 class ArchivedPolicy(models.Model):
@@ -386,6 +397,10 @@ class ArchivedPolicy(models.Model):
 
     def __str__(self):
         return f"{self.number} {self.title}"
+
+    class Meta:
+        verbose_name = "Archived Policy"  # Singular form
+        verbose_name_plural = "Archived Policies"  # Plural form
 
 
 # Represents request forms on each policy

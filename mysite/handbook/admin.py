@@ -96,13 +96,18 @@ class DefinitionInline(admin.TabularInline):
     verbose_name = "Definition" # Label for a single definition
     verbose_name_plural = "Definitions" # Label for multiple definitions
 
-    # Restrict available definitions to those related to department head's policies
+    # Restrict available definitions to those related to department head's policies or created by the user
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "definition":
             if request.user.is_department_head():
-                kwargs["queryset"] = Definition.objects.filter(
+                # Include definitions linked to policies owned by the department
+                department_definitions = Definition.objects.filter(
                     policies__policy_owner=request.user.department
-                ).distinct()
+                )
+                # Include definitions created by the user
+                user_created_definitions = Definition.objects.filter(created_by=request.user)
+                # Combine both querysets
+                kwargs["queryset"] = (department_definitions | user_created_definitions).distinct()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     # Permissions to add definitions
@@ -115,7 +120,7 @@ class DefinitionInline(admin.TabularInline):
 
     # Permissions to delete definitions
     def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser or request.user.is_superuser or request.user.is_executive()
+        return request.user.is_department_head()  or request.user.is_superuser or request.user.is_executive()
 
 
 # Admin configuration for Policy model
@@ -530,6 +535,12 @@ class DefinitionAdmin(admin.ModelAdmin):
     # Label for the column
     definition_display.short_description = "Definition"
 
+    # Automatically set the `created_by` field when saving
+    def save_model(self, request, obj, form, change):
+        if not change and not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
 
 # Executive configuration for Definition model
 class DefinitionAdminForExecutive(DefinitionAdmin):
@@ -556,23 +567,30 @@ class DefinitionAdminForExecutive(DefinitionAdmin):
 
 # Department Head configuration for Definition model
 class DefinitionAdminForDepartmentHead(DefinitionAdmin):
-    # Restrict queryset to definitions related to policies owned by the department
+    # Restrict queryset to definitions related to policies owned by the department or created by the department head
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_department_head():
-            return qs.filter(policies__policy_owner=request.user.department).distinct()
+            # Include definitions linked to policies owned by the department
+            linked_definitions = qs.filter(policies__policy_owner=request.user.department)
+            # Include definitions created by the current user (assuming a creator field)
+            user_created_definitions = qs.filter(created_by=request.user)
+            # Combine both querysets
+            return (linked_definitions | user_created_definitions).distinct()
         return qs
 
-    # Allow department heads to view definitions linked to their department's policies
+    # Allow department heads to view definitions linked to their department's policies or their own
     def has_view_permission(self, request, obj=None):
         if request.user.is_department_head():
-            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
+            # Allow if the definition is linked to a policy owned by their department or created by the user
+            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists() or obj.created_by == request.user
         return super().has_view_permission(request, obj)
 
-    # Allow department heads to edit definitions linked to their department's policies
+    # Allow department heads to edit definitions linked to their department's policies or their own
     def has_change_permission(self, request, obj=None):
         if request.user.is_department_head():
-            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists()
+            # Allow if the definition is linked to a policy owned by their department or created by the user
+            return obj is None or obj.policies.filter(policy_owner=request.user.department).exists() or obj.created_by == request.user
         return super().has_change_permission(request, obj)
 
     # Allow department heads to add definitions
@@ -582,6 +600,7 @@ class DefinitionAdminForDepartmentHead(DefinitionAdmin):
     # Restrict department heads from deleting definitions
     def has_delete_permission(self, request, obj=None):
         return False
+
 
 
 # Admin configuration for Policy Section model
