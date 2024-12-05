@@ -147,12 +147,18 @@ class PolicyAdmin(admin.ModelAdmin):
     # Inline models for editing procedure steps and definitions
     inlines = [ProcedureStepInline, DefinitionInline]
 
+    def get_readonly_fields(self, request, obj=None):
+        # Make section readonly when editing an existing policy.
+        if obj:  # If editing an existing policy
+            return self.readonly_fields + ["section"]
+        return self.readonly_fields  # Keep default readonly fields for new policies
+
+    # For archiving policies
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
         # Add the archive button URL to the context
         extra_context['archive_url'] = reverse('handbook:archive_policy', kwargs={'policy_id': object_id})
         return super().change_view(request, object_id, form_url, extra_context)
-
 
     # Save the policy model without immediately committing to the database
     def save_model(self, request, obj, form, change):
