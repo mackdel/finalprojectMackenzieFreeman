@@ -641,7 +641,7 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
             ]
         if obj:
             # For approved/rejected requests, all fields are readonly
-            if obj.status in ["approved", "rejected"]:
+            if obj.status in ["approved", "rejected", "revision_needed"]:
                 return readonly_fields + [
                     "status", "notes"
                 ]
@@ -802,7 +802,7 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
                 if obj.submitter == request.user:
                     return False # Cannot apporve of own policy
                 # Executives can edit requests they didn't submit unless approved/rejected
-                return obj.status not in ["approved", "rejected"]
+                return obj.status not in ["approved", "rejected", "revision_needed"]
         return super().has_change_permission(request, obj)
 
     # Handle status changes
