@@ -92,7 +92,7 @@ class CustomUser(AbstractUser):
                 ContentType.objects.get_for_model(ProcedureStep),
             ]
             permissions = Permission.objects.filter(content_type__in=content_types, codename__in=[
-                'view_procedurestep','view_policy','view_definition'
+                'view_procedurestep','view_policy','view_definition', 'view_policyapprovalrequest'
             ])
             self.user_permissions.set(permissions)
         elif self.is_executive():
@@ -103,7 +103,7 @@ class CustomUser(AbstractUser):
                 ContentType.objects.get_for_model(ProcedureStep),
             ]
             permissions = Permission.objects.filter(content_type__in=content_types, codename__in=[
-                'view_procedurestep','view_policy','view_definition'
+                'view_procedurestep','view_policy','view_definition', 'view_policyapprovalrequest'
             ])
             self.user_permissions.set(permissions)
         else:

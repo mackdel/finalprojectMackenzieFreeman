@@ -602,7 +602,7 @@ class PolicySectionAdmin(admin.ModelAdmin):
     title_display.short_description = "Section Title"
 
 
-# Executive configuration for Policy Approval Request
+# Admin configuration for Policy Approval Request
 class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     list_display = ["get_policy_or_proposed_title", "request_type",  "status", "submitter", "approver", "submitted_at"]
 
@@ -620,34 +620,33 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
 
     list_filter = ["status", "request_type", "section", "submitted_at"]
     ordering = ["-submitted_at",]
-    readonly_fields = [
-        "policy",
-        "submitter",
-        "approver",
-        "submitted_at",
-        "updated_at",
-        "section",
-        "policy_owner",
-        "current_review_period",
-        "current_version",
-        "current_title",
-        "current_purpose",
-        "current_scope",
-        "current_policy_statements",
-        "current_responsibilities",
-        "current_related_policies",
-        "current_procedure_steps",
-        "current_definitions",
-        "get_proposed_title",
-        "get_proposed_review_period",
-        "get_proposed_purpose",
-        "get_proposed_scope",
-        "get_proposed_policy_statements",
-        "get_proposed_responsibilities",
-        "get_proposed_related_policies",
-        "get_proposed_procedure_steps",
-        "get_proposed_definitions",
-    ]
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = [
+                "policy", "section", "number", "policy_owner", "submitter",
+                "approver", "submitted_at", "updated_at", "current_review_period",
+                "current_version", "current_title", "current_purpose", "current_scope",
+                "current_policy_statements", "current_responsibilities",
+                "current_related_policies", "current_procedure_steps",
+                "current_definitions",
+                    "get_proposed_title",
+                    "get_proposed_review_period",
+                    "get_proposed_purpose",
+                    "get_proposed_scope",
+                    "get_proposed_policy_statements",
+                    "get_proposed_responsibilities",
+                    "get_proposed_related_policies",
+                    "get_proposed_procedure_steps",
+                    "get_proposed_definitions",
+            ]
+        if obj:
+            # For approved/rejected requests, all fields are readonly
+            if obj.status in ["approved", "rejected"]:
+                return readonly_fields + [
+                    "status", "notes"
+                ]
+            return readonly_fields
+        return super().get_readonly_fields(request, obj)
 
     # Dynamically adjust fieldsets based on the `request_type` of the policy approval request
     def get_fieldsets(self, request, obj=None):
@@ -661,71 +660,36 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
             if obj.request_type == "edit":
                 base_fieldsets.insert(0, ("Current Policy Details", {
                     "fields": [
-                        "section",
-                        "current_title",
-                        "current_version",
-                        "policy_owner",
-                        "current_review_period",
-                        "current_purpose",
-                        "current_scope",
-                        "current_policy_statements",
-                        "current_responsibilities",
-                        "current_related_policies",
-                        "current_procedure_steps",
-                        "current_definitions",
+                        "section", "current_title", "current_version", "policy_owner", "current_review_period",
+                        "current_purpose", "current_scope", "current_policy_statements", "current_responsibilities",
+                        "current_related_policies", "current_procedure_steps", "current_definitions",
                     ],
                 }))
                 base_fieldsets.insert(1, ("Proposed Changes",  {
                     "fields": [
-                        "get_proposed_title",
-                        "get_proposed_review_period",
-                        "get_proposed_purpose",
-                        "get_proposed_scope",
-                        "get_proposed_policy_statements",
-                        "get_proposed_responsibilities",
-                        "get_proposed_related_policies",
-                        "get_proposed_procedure_steps",
-                        "get_proposed_definitions",
+                        "get_proposed_title", "get_proposed_review_period", "get_proposed_purpose",
+                        "get_proposed_scope", "get_proposed_policy_statements", "get_proposed_responsibilities",
+                        "get_proposed_related_policies","get_proposed_procedure_steps", "get_proposed_definitions",
                     ],
                 }))
             elif obj.request_type == "new":
                 base_fieldsets.insert(0, ("New Policy Details", {
                     "fields": [
-                        "section",
-                        "get_proposed_title",
-                        "policy_owner",
-                        "get_proposed_review_period",
-                        "get_proposed_purpose",
-                        "get_proposed_scope",
-                        "get_proposed_policy_statements",
-                        "get_proposed_responsibilities",
-                        "get_proposed_related_policies",
-                        "get_proposed_procedure_steps",
+                        "section", "get_proposed_title", "policy_owner", "get_proposed_review_period",
+                        "get_proposed_purpose", "get_proposed_scope", "get_proposed_policy_statements",
+                        "get_proposed_responsibilities", "get_proposed_related_policies", "get_proposed_procedure_steps",
                         "get_proposed_definitions",
                     ],
                 }))
             elif obj.request_type == "archive" and obj.status != "approved":
                 base_fieldsets.insert(0, ("Policy Details", {
                     "fields": [
-                        "section",
-                        "current_title",
-                        "current_version",
-                        "policy_owner",
-                        "current_review_period",
-                        "current_purpose",
-                        "current_scope",
-                        "current_policy_statements",
-                        "current_responsibilities",
-                        "current_related_policies",
-                        "current_procedure_steps",
-                        "current_definitions",
+                        "section", "current_title", "current_version", "policy_owner", "current_review_period", "current_purpose",
+                        "current_scope", "current_policy_statements", "current_responsibilities", "current_related_policies",
+                        "current_procedure_steps", "current_definitions",
                     ],
                 }))
         return base_fieldsets
-
-    # Allow only executives to change approval requests
-    def has_change_permission(self, request, obj=None):
-        return request.user.is_executive()
 
     # Computed fields for the current policy
     # These methods retrieve and display data from the current policy associated with the approval request
@@ -828,42 +792,33 @@ class PolicyApprovalRequestAdmin(admin.ModelAdmin):
     get_proposed_procedure_steps.short_description = "Proposed Procedure Steps"
     get_proposed_definitions.short_description = "Proposed Definitions"
 
+    # Restrict view and edit permissions
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_executive() or request.user.is_department_head()
+
+    def has_change_permission(self, request, obj=None):
+        if obj:
+            if request.user.is_executive():
+                if obj.submitter == request.user:
+                    return False # Cannot apporve of own policy
+                # Executives can edit requests they didn't submit unless approved/rejected
+                return obj.status not in ["approved", "rejected"]
+        return super().has_change_permission(request, obj)
+
     # Handle status changes
     def save_model(self, request, obj, form, change):
         if change:
-            # Automatically assign the current user as the approver
-            if obj.status in ["approved", "revision_needed", "rejected"]:
-                if request.user == obj.submitter:
-                    raise ValidationError("An executive cannot approve their own request.")
-                obj.approver = request.user
-
             # Apply changes if the request is approved
             if obj.status == "approved":
+                obj.approver = request.user # Automatically assign the current user as the approver
                 obj.apply_changes()
 
             # Notify submitter if the request requires revision or is rejected
-            elif obj.status in ["revision_needed", "rejected"]:
-                self.notify_submitter(obj)
+            # elif obj.status in ["revision_needed", "rejected"]:
 
         # Save the changes
         super().save_model(request, obj, form, change)
 
-    # Notify the submitter about the status of their request
-    def notify_submitter(self, obj):
-        submitter_email = obj.submitter.email
-        # Determine the status message
-        status_message = "revision needed" if obj.status == "revision_needed" else "rejected"
-        # Send email notification to the submitter
-        send_mailgun_email(
-            to_email=submitter_email,
-            subject=f"Policy Change Request {status_message.capitalize()}",
-            variables={
-                "policy_number": obj.policy.number,
-                "policy_title": obj.policy.title,
-                "status_message": status_message,
-                "notes": obj.notes or "No additional notes provided.",
-            },
-        )
 
 # Admin configuration for Archived Policy
 class ArchivedPolicyAdmin(admin.ModelAdmin):
