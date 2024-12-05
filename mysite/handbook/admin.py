@@ -128,7 +128,7 @@ class PolicyAdmin(admin.ModelAdmin):
     # Define sections for editing policies
     fieldsets = [
         ("Policy Information", {
-            "fields": ["section", "title", "number", "version", "policy_owner", "pub_date", "review_period"]
+            "fields": ["section", "title", "number", "version", "policy_owner", "pub_date", "updated_at", "review_period"]
         }),
         ("Policy Details", {
             "fields": [
@@ -142,7 +142,7 @@ class PolicyAdmin(admin.ModelAdmin):
             "fields": ["related_policies"]
         }),
     ]
-    readonly_fields = ["number", "pub_date", "version", "policy_owner",]
+    readonly_fields = ["number", "pub_date", "updated_at", "version", "policy_owner",]
     list_display = ["number", "title", "section", "policy_owner", "pub_date", "version"]
     list_filter = ["section", "policy_owner", "pub_date"]
     search_fields = ["title", "policy_statements", "section__title"]

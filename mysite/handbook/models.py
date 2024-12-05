@@ -74,7 +74,7 @@ class Policy(models.Model):
     )
     version = models.CharField(max_length=10)  # For tracking policy version
     pub_date = models.DateField("Date Created", auto_now_add=True)
-    published = models.BooleanField(default=False)
+    updated_at = models.DateTimeField("Last Updated", auto_now=True)
 
     # Review period options
     REVIEW_PERIOD_CHOICES = [
