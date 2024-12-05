@@ -17,6 +17,15 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ("username", "email", "role")
     ordering = ("last_name",)
 
+    # Override save_model to set is_staff based on role
+    def save_model(self, request, obj, form, change):
+        # Automatically set is_staff for specific roles
+        if obj.role in ['executive', 'department_head']:
+            obj.is_staff = True
+        elif obj.role == 'employee':
+            obj.is_staff = False
+        super().save_model(request, obj, form, change)
+
 
 # Admin configuration for Department model
 class DepartmentAdmin(admin.ModelAdmin):

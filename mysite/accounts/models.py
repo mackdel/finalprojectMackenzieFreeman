@@ -31,7 +31,6 @@ class CustomUser(AbstractUser):
         (ADMIN, 'Admin'),
     ]
 
-    email = models.EmailField(unique=True)
     role = models.CharField(max_length=50, choices=ROLE_CHOICES, default=EMPLOYEE)
     department = models.ForeignKey(
         Department,
