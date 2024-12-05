@@ -919,6 +919,7 @@ super_admin_site.register(PolicySection, PolicySectionAdmin)
 super_admin_site.register(Policy, PolicyAdmin)
 super_admin_site.register(Definition, DefinitionAdmin)
 super_admin_site.register(PolicyRequest, PolicyRequestAdmin)
+super_admin_site.register(PolicyApprovalRequest, PolicyApprovalRequestAdmin)
 
 # Register accounts models to super admin
 super_admin_site.register(CustomUser, CustomUserAdmin)
