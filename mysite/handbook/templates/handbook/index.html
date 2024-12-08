@@ -5,13 +5,53 @@ Welcome
 {% endblock %}
 
 {% block content %}
-    <div class="container my-5">
-        <div class="text-center">
-            <h1 class="display-4">Welcome to the Mini Handbook!</h1>
-            <p class="lead">Your guide to understanding company policies and procedures.</p>
-            <a href="{% url 'handbook:policy_sections' %}" class="btn btn-primary btn-lg">Explore Policies</a>
-        </div>
-    </div>
+    {% load static %}
+    <main>
+        <!-- Hero Section -->
+        <section class="hero mb-md-5">
+            <div class="container-xxl">
+                <div class="row align-items-center text-center text-md-start">
+                    <div class="col-md-7">
+                        <h1 class="display-4 fw-bold">Welcome to the ESI Employee Handbook</h1>
+                        <p class="lead mt-3">
+                            Discover our policies, benefits, and the values that make Educology Solutions unique.
+                        </p>
+                        <a href="#welcome-section" class="esi-btn main-btn">
+                            Get Started
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Welcome Section -->
+        <section class="white-background" id="welcome-section">
+            <div class="esi-container mb-5">
+                <h2 class="heading-orange mb-4">Welcome to Educology Solutions!</h2>
+                <p>We’re thrilled to have you join our dedicated and talented team. At ESI, we pride ourselves on providing exceptional services to our government customers, and we believe that your time with us will be both rewarding and challenging.</p>
+                <p>This handbook is designed to help you navigate your journey here at ESI. It contains important information about our employment policies and benefits. While we comply with all federal, state, and local employment laws, this handbook primarily reflects those regulations and may not detail every local law.</p>
+                <p><mark>We encourage you to read this handbook thoroughly.</mark> Once you've reviewed it, please sign the acknowledgment at the end to confirm that you've read, understood, and agreed to its contents. This handbook supersedes any previous versions or policy statements, and ESI reserves the right to update, modify, or supplement it as needed.</p>
+                <p>Remember, this handbook is a guide, not a contract of employment. It’s designed to address common situations in the workplace, but it can’t cover everything. If you have any questions or need clarification on any part of this handbook, please don’t hesitate to reach out to Human Resources.</p>
+                <p>We’re incredibly proud of our employees and the vital role each of you plays in making ESI a respected and trusted corporate citizen. Our work supports critical government missions, and together, we strive to exceed the standards set by our peers and competitors. Your commitment to our corporate policies and standards is crucial for both your growth and our collective success.</p>
+                <p>We’re excited to see all that you will achieve here at ESI. Thank you for being a part of our team!</p>
+                <p>Sincerely, Your President & CEO, </p>
+                <p><strong>Robin Appia</strong></p>
+                <div class="mt-5 text-center">
+                    <img src="{% static 'handbook/images/Group-Photo1.png' %}" alt="Robin Appia, ESI CEO" class="img-fluid rounded shadow-lg">
+                </div>
+            </div>
+        </section>
+
+        <!-- Mission content -->
+        <section id="mission-section" class="dark-background gradient-background">
+            <div class="esi-container">
+                <div class="mission-content light-border">
+                    <h3 class="kicker heading-orange">Our Mission:</h3>
+                    <h2>Modernizing Public Sector Services</h2>
+                    <p>As a provider of technology services and solutions, ESI strives to modernize and transform public sector services to create a digital-first experience. We help our clients create unified environments for development, continuous delivery/continuous integration, and integrate, automate, secure, and manage complexity through consulting, training, and other technical support services.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
 {% endblock %}
-
-
