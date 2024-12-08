@@ -8,11 +8,11 @@ Welcome
     {% load static %}
     <main>
         <!-- Hero Section -->
-        <section class="hero mb-md-5">
+        <section class="hero gradient-background mb-md-5">
             <div class="container-xxl">
                 <div class="row align-items-center text-center text-md-start">
                     <div class="col-md-7">
-                        <h1 class="display-4 fw-bold">Welcome to the ESI Employee Handbook</h1>
+                        <h1 class="display-5 fw-bold">Welcome to the ESI Employee Handbook</h1>
                         <p class="lead mt-3">
                             Discover our policies, benefits, and the values that make Educology Solutions unique.
                         </p>
@@ -26,7 +26,7 @@ Welcome
 
         <!-- Welcome Section -->
         <section class="white-background" id="welcome-section">
-            <div class="esi-container mb-5">
+            <div class="home-container mb-5">
                 <h2 class="heading-orange mb-4">Welcome to Educology Solutions!</h2>
                 <p>We’re thrilled to have you join our dedicated and talented team. At ESI, we pride ourselves on providing exceptional services to our government customers, and we believe that your time with us will be both rewarding and challenging.</p>
                 <p>This handbook is designed to help you navigate your journey here at ESI. It contains important information about our employment policies and benefits. While we comply with all federal, state, and local employment laws, this handbook primarily reflects those regulations and may not detail every local law.</p>
@@ -42,16 +42,90 @@ Welcome
             </div>
         </section>
 
-        <!-- Mission content -->
-        <section id="mission-section" class="dark-background gradient-background">
-            <div class="esi-container">
-                <div class="mission-content light-border">
-                    <h3 class="kicker heading-orange">Our Mission:</h3>
-                    <h2>Modernizing Public Sector Services</h2>
-                    <p>As a provider of technology services and solutions, ESI strives to modernize and transform public sector services to create a digital-first experience. We help our clients create unified environments for development, continuous delivery/continuous integration, and integrate, automate, secure, and manage complexity through consulting, training, and other technical support services.</p>
+        <!-- Mission Section -->
+        <section class="dark-background py-4" id="mission-section" >
+            <div class="home-container">
+                <div class="light-border">
+                    <div class="col-10 m-auto ">
+                        <h3 class="kicker mb-3 mt-5">Our Mission:</h3>
+                        <h2 class="heading-white">Modernizing Public Sector Services</h2>
+                        <p class="mb-5">As a provider of technology services and solutions, ESI strives to modernize and transform public sector services to create a digital-first experience. We help our clients create unified environments for development, continuous delivery/continuous integration, and integrate, automate, secure, and manage complexity through consulting, training, and other technical support services.</p>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- About Section -->
+        <section class="white-background py-4" id="about-section">
+            <div class="home-container">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <h2 class="heading-orange mb-4">About ESI</h2>
+                        <p>Since its inception, ESI has grown into a distinguished IT services provider by recruiting highly skilled personnel, subject matter experts, technical specialists, and trainers. The company emphasizes robust quality management and closely aligns all solutions with government client missions.</p>
+                        <p>Over the past decade, ESI has received numerous customer accolades and industry awards, experienced significant growth, and secured several key certifications and appraisals recognizing its process excellence.</p>
+                    </div>
+                    <div class="col-12 d-md-none mt-4">
+                        <img src="{% static 'handbook/images/office.jpg' %}" alt="ESI Office" class="img-fluid rounded">
+                    </div>
+                </div>
+            </div>
+            <div class="background-image d-none d-md-block" style="background-image: url('{% static "handbook/images/office.jpg" %}');"></div>
+        </section>
+
+
+        <!-- Core Values Section -->
+        <section class="dark-background py-5" id="values-section">
+            <div class="home-container">
+                <h2 class="text-center heading-white mb-5">Our Core Values</h2>
+                <div class="value-row row gx-5">
+                    <!-- First Card -->
+                    <div class="col-md-6">
+                        <div class="value-card light-border h-100">
+                            <div class="icon dark-background">
+                                <img src="{% static 'handbook/graphics/icon-set/ico-01.png' %}" alt="Employees First Icon" class="img-fluid" style="width: 80px;">
+                            </div>
+                            <h5 class="fw-bold">Employees first, customer always</h5>
+                            <p class="text-opacity-75">We consider our team our most valuable asset. By ensuring our employees are fulfilled and engaged, we foster a collaborative and innovative environment that leads to superior solutions and heightened customer satisfaction.</p>
+                        </div>
+                    </div>
+
+                    <!-- Second Card -->
+                    <div class="col-md-6">
+                        <div class="value-card light-border h-100">
+                            <div class="icon dark-background">
+                                <img src="{% static 'handbook/graphics/icon-set/ico-02.png' %}" alt="Measurement Icon" class="img-fluid" style="width: 80px;">
+                            </div>
+                            <h5 class="fw-bold">You can’t manage, what you don’t measure</h5>
+                            <p>We strive to ensure that our actions are both correct and effective. By leveraging analytics, we enhance service delivery and elevate the quality and outcomes of our projects, business practices, and policies.</p>
+                        </div>
+                    </div>
+
+                    <!-- Third Card -->
+                    <div class="col-md-6">
+                        <div class="value-card light-border h-100">
+                            <div class="icon dark-background ">
+                                <img src="{% static 'handbook/graphics/icon-set/ico-03.png' %}" alt="Mission Driven Leadership Icon" class="img-fluid" style="width: 80px;">
+                            </div>
+                            <h5 class="fw-bold">Mission driven leadership</h5>
+                            <p>Our leaders are seasoned and dynamic, energizing our team by aligning efforts toward a shared purpose. We seek leaders who clearly articulate our mission, champion our vision for the future, and define the critical role each employee plays in our collective journey.</p>
+                        </div>
+                    </div>
+
+                    <!-- Fourth Card -->
+                    <div class="col-md-6">
+                        <div class="value-card light-border h-100">
+                            <div class="icon dark-background">
+                                 <img src="{% static 'handbook/graphics/icon-set/ico-04.png' %}" alt="Everyone Matters Icon" class="img-fluid" style="width: 80px;">
+                            </div>
+                            <h5 class="fw-bold">Everyone matters</h5>
+                            <p>Diversity and inclusion are vital for enhancing business performance, especially in times of crisis. Our creativity and innovation stem from our diverse perspectives, enabling us to anticipate and adapt to changing consumer needs and prepare effectively for the future.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
     </main>
 
 {% endblock %}

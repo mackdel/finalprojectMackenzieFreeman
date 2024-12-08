@@ -15,7 +15,7 @@
     --light-border-color: #EBEAED;          /* Use on dark background colors*/
     --dark-border-color: #030E29;           /* Use on light background colors*/
 
-    --main-button-color: linear-gradient(90deg, #F37C2A, #D95829);
+    --main-button-color: linear-gradient(90deg, #F37C2A, #D95829, #D95829);
     --main-button-hover-color: linear-gradient(90deg, #B15A0A, #B73607);
 
     --secondary-button-border-color: #EBEAED;
@@ -37,10 +37,21 @@ body{
     font-family: 'Lato', sans-serif !important;
 }
 
+section{
+    position: relative;
+    width: 100%;
+}
+
 
 /* || SITEWIDE */
 .dark-background{
     background: var(--dark-bg-color);
+    color: var(--dark-font-color);
+}
+
+.gradient-background{
+    background-color: var(--dark-bg-color);
+    background-image: var(--gradient-bg-color) !important;
     color: var(--dark-font-color);
 }
 
@@ -49,13 +60,19 @@ body{
     color: var(--light-font-color);
 }
 
-.esi-container {
-    max-width: 1000px;
+.home-container {
     width: 100%;
+    max-width: 1000px;
     margin: 2rem auto;
+    padding: 2rem 2rem;
     position: relative;
-    z-index: 1;
-    padding: 2.5rem 2rem;
+    -webkit-font-smoothing: antialiased;
+}
+
+.home-container p {
+    font-size: 1rem;
+    margin: 20px 0;
+    line-height: 25px;
 }
 
 .heading-orange{
@@ -63,10 +80,9 @@ body{
     font-weight: 600;
 }
 
-.esi-container p {
-    font-size: 17px;
-    margin: 25px 0;
-    line-height: 30px;
+.heading-white{
+    color: var(--dark-heading-color);
+    font-weight: 600;
 }
 
 .esi-btn {
@@ -83,7 +99,7 @@ body{
 
 .main-btn{
     height: 35px;
-    background: var(--main-bullet-color);
+    background: var(--main-button-color);
     border: none;
     color: var(--dark-font-color);
     padding: 10px 25px;
@@ -92,6 +108,20 @@ body{
 
 .main-btn:hover {
     background: var(--main-button-hover-color) !important;
+}
+
+.light-border{
+    border-radius: 10px;
+    border: 1px solid var(--light-border-color);
+}
+
+.kicker{
+    font-size: 16px;
+    color: var(--kicker-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    font-family: 'Montserrat', sans-serif;
 }
 
 
@@ -139,44 +169,48 @@ body{
 /* || HERO */
 .hero{
     padding: 3rem 1rem 4rem 1rem;
-    background: var(--dark-bg-color);
-    color: var(--dark-font-color);
     font-family: 'Montserrat', sans-serif;
 }
 
-
-
-.mission-content {
-    padding: 40px 30px;
-    color: var(--dark-font-color);
+/* || ABOUT SECTION */
+#about-section .background-image {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40%;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
 }
 
-.kicker{
-    font-size: 16px;
-    color: var(--kicker-color);
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-bottom: 15px;
+/* || VALUES SECTION */
+.value-row {
+    margin-top: 60px !important;
+    row-gap: 3.75rem;
 }
 
-.light-border{
-    border-radius: 10px;
-    border: 1px solid var(--light-border-color);
+.value-card {
+    padding: 75px 35px 20px 35px;
+    text-align: center;
+    position: relative;
 }
 
-
-
-@media (max-width: 576px) {
-    .hero h1 {
-        font-size: 2rem;
-    }
-
-    .hero p {
-        font-size: 1rem;
-    }
+.value-card .icon {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
 }
+
 
 @media (min-width: 992px) {
+    .home-container p {
+        font-size: 1.0625rem;
+        margin: 25px 0;
+        line-height: 30px;
+    }
 
     /* || NAVBAR */
     .nav-profile {
@@ -202,8 +236,10 @@ body{
         padding-left: 1px !important;
     }
 
-    .mission-content {
-        padding: 40px 50px;
+    /* || VALUES SECTION */
+    .value-card p {
+        font-size: 1rem;
+        margin: 20px 0;
+        line-height: 25px;
     }
-
 }
