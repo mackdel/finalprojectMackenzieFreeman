@@ -17,8 +17,22 @@ Handles views for the handbook application, including homepage, policy sections,
 policy requests, and major policy change processing.
 """
 
+# Provides a reusable context mixin for views that need access to policy sections and their related policies
+class PolicyContextMixin:
+    def get_policy_context(self):
+        return {
+            'sections': PolicySection.objects.prefetch_related('policies'), # Prefetch policies for each section
+            'policies': Policy.objects.all(), # Get policies
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self.get_policy_context())
+        return context
+
+
 # Home page view: Displays the homepage for authenticated users
-class IndexView(LoginRequiredMixin, TemplateView):
+class IndexView(LoginRequiredMixin, PolicyContextMixin, TemplateView):
     template_name = "handbook/index.html"
 
 

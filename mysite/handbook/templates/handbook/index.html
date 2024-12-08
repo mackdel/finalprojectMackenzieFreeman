@@ -84,8 +84,8 @@ Welcome
                             <div class="icon dark-background">
                                 <img src="{% static 'handbook/graphics/icon-set/ico-01.png' %}" alt="Employees First Icon" class="img-fluid" style="width: 80px;">
                             </div>
-                            <h5 class="fw-bold">Employees first, customer always</h5>
-                            <p class="text-opacity-75">We consider our team our most valuable asset. By ensuring our employees are fulfilled and engaged, we foster a collaborative and innovative environment that leads to superior solutions and heightened customer satisfaction.</p>
+                            <h5 class="fw-semibold h5">Employees first, customer always</h5>
+                            <p>We consider our team our most valuable asset. By ensuring our employees are fulfilled and engaged, we foster a collaborative and innovative environment that leads to superior solutions and heightened customer satisfaction.</p>
                         </div>
                     </div>
 
@@ -95,7 +95,7 @@ Welcome
                             <div class="icon dark-background">
                                 <img src="{% static 'handbook/graphics/icon-set/ico-02.png' %}" alt="Measurement Icon" class="img-fluid" style="width: 80px;">
                             </div>
-                            <h5 class="fw-bold">You can’t manage, what you don’t measure</h5>
+                            <h5 class="fw-semibold h5">You can’t manage, what you don’t measure</h5>
                             <p>We strive to ensure that our actions are both correct and effective. By leveraging analytics, we enhance service delivery and elevate the quality and outcomes of our projects, business practices, and policies.</p>
                         </div>
                     </div>
@@ -106,7 +106,7 @@ Welcome
                             <div class="icon dark-background ">
                                 <img src="{% static 'handbook/graphics/icon-set/ico-03.png' %}" alt="Mission Driven Leadership Icon" class="img-fluid" style="width: 80px;">
                             </div>
-                            <h5 class="fw-bold">Mission driven leadership</h5>
+                            <h5 class="fw-semibold h5">Mission driven leadership</h5>
                             <p>Our leaders are seasoned and dynamic, energizing our team by aligning efforts toward a shared purpose. We seek leaders who clearly articulate our mission, champion our vision for the future, and define the critical role each employee plays in our collective journey.</p>
                         </div>
                     </div>
@@ -117,7 +117,7 @@ Welcome
                             <div class="icon dark-background">
                                  <img src="{% static 'handbook/graphics/icon-set/ico-04.png' %}" alt="Everyone Matters Icon" class="img-fluid" style="width: 80px;">
                             </div>
-                            <h5 class="fw-bold">Everyone matters</h5>
+                            <h5 class="fw-semibold h5">Everyone matters</h5>
                             <p>Diversity and inclusion are vital for enhancing business performance, especially in times of crisis. Our creativity and innovation stem from our diverse perspectives, enabling us to anticipate and adapt to changing consumer needs and prepare effectively for the future.</p>
                         </div>
                     </div>
@@ -125,7 +125,46 @@ Welcome
             </div>
         </section>
 
+        <!-- Story content -->
+        <section class="white-background" id="story-section">
+            <div class="home-container story-flex">
+                <div class="story-content">
+                    <div>
+                        <h2 class="heading-orange">Our Story</h2>
+                        <p>Robin Appia, President & CEO, founded Educology Solutions (ESI) in 2008. Drawing on her experience in the Federal IT industry, Robin recognized the urgent need for a well-trained end-user workforce to support the complex technologies used in government agencies. This realization inspired her to establish ESI, with the goal of bridging the educational gap between technology users and the systems they operate.</p>
+                    </div>
+                </div>
+                <div><div class="story-image"><img src="{% static 'handbook/graphics/about-01.png' %}"  alt="" class="main-image"></div></div>
+            </div>
+        </section>
 
+
+        <!-- Policies content -->
+        <section class="dark-background py-5" id="policies-section" >
+            <div class="home-container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="heading-white">Policies</h2>
+                    <button class="esi-btn secondary-btn" id="policiesButton">Explore Policies</button>
+                </div>
+                <hr class="border-light">
+                <div class="row g-4 mt-4">
+                    {% for section in sections %}
+                        <div class="col-md-6">
+                                <div class="policy-card light-border white-background p-4">
+                                    <h3 class="fw-semibold h5">{{ section.number }} {{ section.title }}</h3>
+                                    <ul class="mt-3">
+                                         {% for policy in section.policies.all %}
+                                            <li>{{ policy.number }} {{ policy.title }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <button class="esi-btn main-btn mt-3 px-4 py-2" id="policyButton">Explore</button>
+                                </div>
+                            </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </section>
     </main>
 
 {% endblock %}

@@ -28,7 +28,7 @@
 
 
 /* || ELEMENTS */
-h1,h2{
+h1,h2,h3,h4,h5{
     font-family: 'Montserrat', sans-serif !important;
 }
 
@@ -66,7 +66,6 @@ section{
     margin: 2rem auto;
     padding: 2rem 2rem;
     position: relative;
-    -webkit-font-smoothing: antialiased;
 }
 
 .home-container p {
@@ -95,6 +94,7 @@ section{
     box-shadow: var(--box-shadow);
     cursor: pointer;
     text-decoration: none;
+    font-weight: 400 !important;
 }
 
 .main-btn{
@@ -108,6 +108,21 @@ section{
 
 .main-btn:hover {
     background: var(--main-button-hover-color) !important;
+}
+
+.secondary-btn {
+    height: 40px;
+    background: none;
+    border: 1px solid var(--secondary-button-border-color);
+    font-size: 14px;
+    color: var(--dark-font-color);
+    padding: 20px 30px;
+    transition: 0.2s ease;
+}
+
+.secondary-btn:hover {
+    border-color: var(--secondary-button-hover-border-color);
+    color: #F37C2A;
 }
 
 .light-border{
@@ -172,6 +187,7 @@ section{
     font-family: 'Montserrat', sans-serif;
 }
 
+
 /* || ABOUT SECTION */
 #about-section .background-image {
     position: absolute;
@@ -183,6 +199,7 @@ section{
     background-position: center;
     z-index: 0;
 }
+
 
 /* || VALUES SECTION */
 .value-row {
@@ -205,13 +222,55 @@ section{
 }
 
 
-@media (min-width: 992px) {
+/* || STORY SECTION */
+.story-image {
+    margin: 0;
+    width: 100%;
+    max-width: 500px;
+}
+
+.story-image img {
+    width: 100%;
+    height: auto;
+}
+
+.story-flex {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    position: relative;
+}
+
+
+/* || POLICIES SECTION */
+.policy-card ul{
+    padding-left:0;
+    list-style-type: square;
+    list-style-position: inside;
+}
+
+.policy-card ul li{
+    margin-bottom: 0.5rem;
+}
+
+.policy-card li::marker{
+    color: var(--main-bullet-color);
+}
+
+
+
+/* || MEDIA QUERIES */
+@media (min-width: 768px) {
     .home-container p {
         font-size: 1.0625rem;
         margin: 25px 0;
         line-height: 30px;
     }
+}
 
+@media (min-width: 992px) {
     /* || NAVBAR */
     .nav-profile {
         width: 100%;
@@ -241,5 +300,22 @@ section{
         font-size: 1rem;
         margin: 20px 0;
         line-height: 25px;
+    }
+
+
+    /* || STORY SECTION */
+    .story-flex {
+        flex-direction: row;
+        z-index: 10 !important;
+    }
+
+    .story-content,
+    .story-image {
+        flex: 1;
+    }
+
+    .story-image {
+        margin: -60px -55px -140px 0;
+        max-width: 550px;
     }
 }
