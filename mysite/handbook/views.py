@@ -1,19 +1,16 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
-from django.db.models import ForeignKey, ManyToManyField
 from django.views import View
-from django.views.generic import TemplateView, ListView, DetailView
-from django.views.generic.edit import FormView
+from django.views.generic import TemplateView, FormView
 from django.shortcuts import get_object_or_404, redirect
-from django.http import HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib import messages
 from datetime import datetime
 from .models import PolicySection, Policy, PolicyApprovalRequest, ProcedureStep, Definition
 from .forms import PolicyRequestForm, MajorChangeQuestionnaireForm
 from .utils import send_mailgun_email
-
-from django.http import JsonResponse
 from django.template.loader import render_to_string
+from django.db.models import ForeignKey, ManyToManyField
 
 """
 Handles views for the handbook application, including homepage, policy sections, 
@@ -24,7 +21,6 @@ policy requests, and major policy change processing.
 class PolicyContextMixin:
     def get_policy_context(self):
         return {
-            # Prefetch policies and order sections by number
             'sections': PolicySection.objects.prefetch_related('policies').order_by('number'),
         }
 
@@ -40,28 +36,15 @@ class IndexView(LoginRequiredMixin, PolicyContextMixin, TemplateView):
 
 
 # Section detail view: Displays details of a selected section and its related policies
-class PolicySectionsDetailsView(LoginRequiredMixin, TemplateView):
+class PolicySectionsDetailsView(LoginRequiredMixin, PolicyContextMixin, TemplateView):
     template_name = "handbook/sections.html"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
 
-        # Fetch all sections with their related policies for tabs
-        context["sections"] = PolicySection.objects.prefetch_related("policies").order_by("number")
 
-        # Default to the first policy for initial content
-        first_section = PolicySection.objects.prefetch_related("policies").first()
-        first_policy = first_section.policies.first() if first_section else None
-
-        context["default_policy"] = first_policy
-
-        return context
-
-#
+# Fetch policy details view: Fetched details for a specific policy
 class FetchPolicyDetailsView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        policy_id = self.kwargs.get('policy_id')  # Fetch the policy ID from URL
-        policy = get_object_or_404(Policy, id=policy_id)
+        policy = get_object_or_404(Policy, id=self.kwargs.get('policy_id')) # Fetch the policy ID from URL
 
         # Render the fragment template as HTML
         rendered_policy_content = render_to_string(
@@ -74,20 +57,9 @@ class FetchPolicyDetailsView(LoginRequiredMixin, View):
         return JsonResponse({"content": rendered_policy_content})
 
 
-#
+# Fetch introduction details view: Fetches introduction content
 class FetchIntroductionDetailsView(LoginRequiredMixin, TemplateView):
     template_name = "handbook/introduction_fragment.html"
-
-
-# Policy sections view: Displays all policy sections with their related policies details
-class PolicySectionsView(LoginRequiredMixin, ListView):
-    model = PolicySection
-    template_name = "handbook/policy_sections.html"
-    context_object_name = "sections"
-
-    def get_queryset(self):
-        # Prefetch related policies for efficiency
-        return PolicySection.objects.prefetch_related('policies').annotate().order_by('number')
 
 
 # Policy request form view: Allows users to submit questions/clarifications for a specific policy
@@ -221,7 +193,12 @@ class MajorChangeQuestionnaireView(LoginRequiredMixin, FormView):
 
     # Directly apply minor changes to the policy
     def apply_changes(self, policy, unsaved_changes):
-        major, minor = map(int, policy.version.split('.'))
+        try:
+            major, minor = map(int, policy.version.split('.'))
+        except (AttributeError, ValueError):
+            # Default to version 1.0 if version is not set or invalid
+            major, minor = 1, 0
+
         minor += 1
         policy.version = f"{major}.{minor}"
 
