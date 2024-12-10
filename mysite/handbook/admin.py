@@ -152,6 +152,27 @@ class PolicyAdmin(admin.ModelAdmin):
     # Inline models for editing procedure steps and definitions
     inlines = [ProcedureStepInline, DefinitionInline]
 
+    def get_fieldsets(self, request, obj=None):
+        # Adjust fieldsets when creating a new policy
+        if obj is None:  # Adding a new policy
+            return [
+                ("Policy Information", {
+                    "fields": ["section", "title", "policy_owner", "review_period"]
+                }),
+                ("Policy Details", {
+                    "fields": [
+                        "purpose",
+                        "scope",
+                        "policy_statements",
+                        "responsibilities"
+                    ],
+                }),
+                ("Relationships", {
+                    "fields": ["related_policies"]
+                }),
+            ]
+        return super().get_fieldsets(request, obj)
+
     # Dynamically adjust readonly fields based on user role and policy state:
     def get_readonly_fields(self, request, obj=None):
         # Start with the default readonly fields
