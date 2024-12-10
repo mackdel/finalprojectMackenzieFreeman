@@ -4,6 +4,9 @@
     --dark-bg-color: #030E29;
     --gradient-bg-color: linear-gradient(180deg, #030E29, #07205E, #1C4871);
 
+    --misc-color: #0B2055;
+    --highlight-color: #2A7CC7;
+
     --light-heading-color: #D95829;         /* Use on light background colors*/
     --dark-heading-color: white;            /* Use on dark background colors*/
 
@@ -158,6 +161,31 @@ section{
     border:none !important;
 }
 
+.dropdown-toggle{
+    display: flex !important;
+    align-items: center;
+}
+
+.dropdown-toggle::before{
+    background: url('/static/handbook/graphics/icon-set/arrow.svg');
+    content: '';
+    display: block;
+    height: 18px;
+    width: 18px;
+    margin-right: 5px;
+    background-size: cover;
+    transition: 0.2s ease-out;
+}
+
+.dropdown-toggle::after{
+    border: none !important;
+}
+
+.dropdown-toggle.show::before {
+  transform: rotate(90deg);
+}
+
+
 .dropdown-menu{
     background-color: transparent !important;
     border: none !important;
@@ -170,7 +198,7 @@ section{
 }
 
 .dropdown-item:hover{
-    background-color:  #2A7CC7 !important;
+    background-color:  var(--highlight-color) !important;
 }
 
 .social-icons{
@@ -279,8 +307,9 @@ section{
     .dropdown-menu{
         margin-top: 16px !important;
         margin-right: 0 !important;
-        background-color: #030303 !important;
+        background-color: var(--misc-color) !important;
         border-radius: 0 0 5px 5px !important;
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
     }
 
     .navbar-collapse{

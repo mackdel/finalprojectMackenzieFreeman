@@ -12,6 +12,9 @@ from .models import PolicySection, Policy, PolicyApprovalRequest, ProcedureStep,
 from .forms import PolicyRequestForm, MajorChangeQuestionnaireForm
 from .utils import send_mailgun_email
 
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+
 """
 Handles views for the handbook application, including homepage, policy sections, 
 policy requests, and major policy change processing.
@@ -21,8 +24,8 @@ policy requests, and major policy change processing.
 class PolicyContextMixin:
     def get_policy_context(self):
         return {
-            'sections': PolicySection.objects.prefetch_related('policies'), # Prefetch policies for each section
-            'policies': Policy.objects.all(), # Get policies
+            # Prefetch policies and order sections by number
+            'sections': PolicySection.objects.prefetch_related('policies').order_by('number'),
         }
 
     def get_context_data(self, **kwargs):
@@ -36,7 +39,47 @@ class IndexView(LoginRequiredMixin, PolicyContextMixin, TemplateView):
     template_name = "handbook/index.html"
 
 
-# Policy sections view: Displays all policy sections with their related policies listed underneath
+# Section detail view: Displays details of a selected section and its related policies
+class PolicySectionsDetailsView(LoginRequiredMixin, TemplateView):
+    template_name = "handbook/sections.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Fetch all sections with their related policies for tabs
+        context["sections"] = PolicySection.objects.prefetch_related("policies").order_by("number")
+
+        # Default to the first policy for initial content
+        first_section = PolicySection.objects.prefetch_related("policies").first()
+        first_policy = first_section.policies.first() if first_section else None
+
+        context["default_policy"] = first_policy
+
+        return context
+
+#
+class FetchPolicyDetailsView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        policy_id = self.kwargs.get('policy_id')  # Fetch the policy ID from URL
+        policy = get_object_or_404(Policy, id=policy_id)
+
+        # Render the fragment template as HTML
+        rendered_policy_content = render_to_string(
+            "handbook/policy_detail_fragment.html",
+            {"policy": policy},
+            request=request
+        )
+
+        # Return the HTML as part of a JSON response
+        return JsonResponse({"content": rendered_policy_content})
+
+
+#
+class FetchIntroductionDetailsView(LoginRequiredMixin, TemplateView):
+    template_name = "handbook/introduction_fragment.html"
+
+
+# Policy sections view: Displays all policy sections with their related policies details
 class PolicySectionsView(LoginRequiredMixin, ListView):
     model = PolicySection
     template_name = "handbook/policy_sections.html"
@@ -44,22 +87,7 @@ class PolicySectionsView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # Prefetch related policies for efficiency
-        return PolicySection.objects.prefetch_related('policies')
-
-
-# Section detail view: Displays details of a single section and its related policies
-class SectionDetailView(LoginRequiredMixin, DetailView):
-    model = PolicySection
-    template_name = "handbook/section.html"
-    context_object_name = "section"
-    slug_field = "number"  # Match section based on the 'number' field (e.g., 1.0)
-    slug_url_kwarg = "section_number"  # URL parameter to look up the section
-
-    def get_context_data(self, **kwargs):
-        # Add policies in the section to the context
-        context = super().get_context_data(**kwargs)
-        context['policies'] = Policy.objects.filter(section=self.object).order_by('number')
-        return context
+        return PolicySection.objects.prefetch_related('policies').annotate().order_by('number')
 
 
 # Policy request form view: Allows users to submit questions/clarifications for a specific policy

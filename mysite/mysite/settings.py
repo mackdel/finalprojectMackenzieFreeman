@@ -48,6 +48,18 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# Debug Toolbar configuration
+DEBUG_TOOLBAR_CONFIG = {
+    'DISABLE_PANELS': [
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    ],
+    'SHOW_TOOLBAR_CALLBACK': lambda request: (
+        not request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
+        not request.path.startswith('/handbook/introduction/content/')
+    ),
+}
+
+
 ALLOWED_HOSTS = []
 
 

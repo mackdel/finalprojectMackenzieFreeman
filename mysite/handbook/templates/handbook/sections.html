@@ -1,0 +1,73 @@
+{% extends "handbook/base.html" %}
+
+{% block title %}
+Policy Sections
+{% endblock %}
+
+<!-- Policies Side Nav Controls-->
+{% block add-nav %}
+    <div class="actions-container d-lg-none">
+        <div class="container-xxl d-flex ">
+            <button class="btn sidebar-btn" type="button"  data-bs-toggle="offcanvas" data-bs-target="#navSidebar" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar-quicklinks">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#262D3DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+            </button>
+            <nav style="--bs-breadcrumb-divider: url(&#34;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M2.5 0L1 1.5 3.5 4 1 6.5 2.5 8l4-4-4-4z' fill='%236c757d'/%3E%3C/svg%3E&#34;);" aria-label="breadcrumb">
+              <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="#">Section Name</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Policy Name</li>
+              </ol>
+            </nav>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="main-wrapper container-xxl mt-4 my-md-4 gx-5">
+        <!-- Policies Side Nav-->
+        <aside class="sidebar">
+            <div class="offcanvas-lg offcanvas-start" tabindex="-1" id="navSidebar" aria-labelledby="navSidebarOffCanvasLabel">
+              <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title" id="navSidebarOffCanvasLabel">Browse Policies</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" data-bs-target="#navSidebar"></button>
+              </div>
+              <div class="offcanvas-body">
+                <nav class="sidebar-inner" id="policies-nav" aria-label="Policies navigation">
+                    <ol class="list-unstyled mb-0 pb-3 pb-md-2 pe-lg-3">
+                        <li class="sidebar-menu-group">
+                            <a id="introduction-link" href="#" data-introduction="true" class="d-inline-block sidebar-menu-link">Introduction</a>
+                        </li>
+                        {% for section in sections %}
+                        <li class="sidebar-menu-group">
+                            <details name="reqs">
+                                <summary>{{ section.number }} {{ section.title }}</summary>
+                                <ol class="list-unstyled small">
+                                    {% for policy in section.policies.all %}
+                                    <li class="mt-2">
+                                        <a href="{% url 'handbook:fetch_policy_content' policy_id=policy.id %}" class="d-inline-block sidebar-menu-link" aria-current="page">
+                                            {{ policy.number }} {{ policy.title }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ol>
+                            </details>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </nav>
+              </div>
+            </div>
+        </aside>
+
+        <!-- Policies Content-->
+        <main class="main-content ps-lg-2">
+            <article>
+                <!-- This will be dynamically populated -->
+            </article>
+        </main>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    {% load static %}
+    <script src="{% static 'handbook/js/sections.js' %}"></script>
+{% endblock %}

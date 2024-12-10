@@ -86,3 +86,4 @@ Inspiration, code snippets, etc.
 * [LearnDjango](https://learndjango.com/tutorials/django-login-and-logout-tutorial)
 * [Django-Anymail](https://github.com/anymail/django-anymail)
 * [Stack Overflow - Dharanidhar Reddy](https://stackoverflow.com/a/71084228)
+* [sitepoint](https://www.sitepoint.com/style-html-details-element/)
