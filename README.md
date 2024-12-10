@@ -87,3 +87,4 @@ Inspiration, code snippets, etc.
 * [Django-Anymail](https://github.com/anymail/django-anymail)
 * [Stack Overflow - Dharanidhar Reddy](https://stackoverflow.com/a/71084228)
 * [sitepoint](https://www.sitepoint.com/style-html-details-element/)
+* [mdn web docs](https://developer.mozilla.org/en-US/docs/Learn/Server-side/Django/)

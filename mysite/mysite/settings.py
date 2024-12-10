@@ -57,6 +57,7 @@ DEBUG_TOOLBAR_CONFIG = {
         not request.headers.get('X-Requested-With') == 'XMLHttpRequest' and
         not request.path.startswith('/handbook/introduction/content/')
     ),
+    'IS_RUNNING_TESTS': False,
 }
 
 
