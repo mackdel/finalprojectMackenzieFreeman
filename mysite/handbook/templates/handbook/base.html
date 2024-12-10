@@ -59,7 +59,13 @@
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" >
                                 <li><a class="dropdown-item" href="{% url 'handbook:sections' %}">View All Policies</a></li>
                                 {% for section in sections %}
-                                    <li><a class="dropdown-item" href="#">{{ section.number }} {{ section.title }}</a></li>
+                                    {% if section.policies.exists %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'handbook:sections' %}?policy={{ section.policies.first.id }}">
+                                                {{ section.number }} {{ section.title }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
                                 {% endfor %}
                             </ul>
                         </li>

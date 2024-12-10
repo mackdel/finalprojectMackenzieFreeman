@@ -144,22 +144,25 @@ Welcome
             <div class="home-container">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="heading-white">Policies</h2>
-                    <button class="esi-btn secondary-btn" id="policiesButton">Explore Policies</button>
+                    <a class="esi-btn secondary-btn" id="policiesButton" href="{% url 'handbook:sections' %}" >Explore Policies</a>
                 </div>
                 <hr class="border-light">
                 <div class="row g-4 mt-4">
                     {% for section in sections %}
+                        {% if section.policies.exists %}
                         <div class="col-md-6">
                                 <div class="policy-card light-border white-background p-4">
                                     <h3 class="fw-semibold h5">{{ section.number }} {{ section.title }}</h3>
                                     <ul class="mt-3">
+                                    
                                          {% for policy in section.policies.all %}
                                             <li>{{ policy.number }} {{ policy.title }}</li>
                                         {% endfor %}
                                     </ul>
-                                    <button class="esi-btn main-btn mt-3 px-4 py-2" id="policyButton">Explore</button>
+                                    <a class="esi-btn main-btn mt-3 px-4 py-2" id="policyButton" href="{% url 'handbook:sections' %}?policy={{ section.policies.first.id }}">Explore</a>
                                 </div>
                             </div>
+                        {% endif %}
                     {% endfor %}
 
                 </div>

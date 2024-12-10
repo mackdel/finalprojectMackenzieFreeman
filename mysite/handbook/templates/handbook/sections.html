@@ -37,20 +37,22 @@ Policy Sections
                             <a id="introduction-link" href="#" data-introduction="true" class="d-inline-block sidebar-menu-link">Introduction</a>
                         </li>
                         {% for section in sections %}
-                        <li class="sidebar-menu-group">
-                            <details name="reqs">
-                                <summary>{{ section.number }} {{ section.title }}</summary>
-                                <ol class="list-unstyled small">
-                                    {% for policy in section.policies.all %}
-                                    <li class="mt-2">
-                                        <a href="{% url 'handbook:fetch_policy_content' policy_id=policy.id %}" class="d-inline-block sidebar-menu-link" aria-current="page">
-                                            {{ policy.number }} {{ policy.title }}
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                </ol>
-                            </details>
-                        </li>
+                            {% if section.policies.exists %}
+                                <li class="sidebar-menu-group">
+                                    <details name="reqs">
+                                        <summary>{{ section.number }} {{ section.title }}</summary>
+                                        <ol class="list-unstyled small">
+                                            {% for policy in section.policies.all %}
+                                            <li class="mt-2">
+                                                <a href="{% url 'handbook:fetch_policy_content' policy_id=policy.id %}" class="d-inline-block sidebar-menu-link" aria-current="page">
+                                                    {{ policy.number }} {{ policy.title }}
+                                                </a>
+                                            </li>
+                                            {% endfor %}
+                                        </ol>
+                                    </details>
+                                </li>
+                            {% endif %}
                         {% endfor %}
                     </ol>
                 </nav>
