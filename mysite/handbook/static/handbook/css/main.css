@@ -123,6 +123,11 @@ section{
     transition: 0.2s ease;
 }
 
+.secondary-btn.is-dark{
+    border: 1px solid var(--dark-border-color);
+    color: var(--light-font-color);
+}
+
 .secondary-btn:hover {
     border-color: var(--secondary-button-hover-border-color);
     color: #F37C2A;
