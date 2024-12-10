@@ -1,54 +1,54 @@
-{% extends "handbook/base.html" %}
+{% extends "registration/base.html" %}
 
-{% block title %}
-    Login
+{% block title %}Login{% endblock %}
+
+{% block header %}
+<h3 class="text-center">Welcome to the Handbook!</h3>
 {% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <!-- Header Section -->
-            <div class="text-center">
-                <h1 class="display-5 mb-3">Login</h1>
-                <p class="text-muted">Access your account to explore the Employee Handbook.</p>
-            </div>
 
-            <!-- Login Form -->
-            <form method="post" novalidate class="bg-light p-4 rounded shadow-sm">
-                {% csrf_token %}
-                <div class="mb-3 row">
-                    <label for="id_username" class="form-label">Username</label>
-                    {{ form.username }}
-                    {% if form.username.errors %}
-                        <div class="text-danger small">{{ form.username.errors|striptags }}</div>
-                    {% endif %}
-                </div>
-                <div class="mb-3 row">
-                    <label for="id_password" class="form-label">Password</label>
-                    {{ form.password }}
-                    {% if form.password.errors %}
-                        <div class="text-danger small">{{ form.password.errors|striptags }}</div>
-                    {% endif %}
-                    <p>Forgot Password? <a href="{% url 'password_reset' %}" class="">Reset Password</a></p>
-                </div>
-                {% if form.non_field_errors %}
-                    <div class="text-danger small mb-3">
-                        {{ form.non_field_errors|striptags }}
-                    </div>
-                {% endif %}
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </div>
-            </form>
-
-            <!-- Register Link -->
-            <div class="text-center mt-3">
-                <p class="text-muted">Don't have an account?
-                    <a href="{% url 'accounts:signup' %}" class="fw-semibold">Register here</a>.
-                </p>
-            </div>
-        </div>
+<form method="post" novalidate>
+    {% csrf_token %}
+    <!-- Username Field -->
+    <div class="form-floating mb-3">
+        {{ form.username}}
+        <label for="{{ form.username.id_for_label }}">Username</label>
+        {% if form.username.errors %}
+            <div class="text-danger small">{{ form.username.errors|striptags }}</div>
+        {% endif %}
     </div>
+
+    <!-- Password Field -->
+    <div class="form-floating mb-3">
+        {{ form.password}}
+        <label for="{{ form.password.id_for_label }}">Password</label>
+        {% if form.password.errors %}
+            <div class="text-danger small">{{ form.password.errors|striptags }}</div>
+        {% endif %}
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger small mb-3">
+            {{ form.non_field_errors|striptags }}
+        </div>
+    {% endif %}
+
+    <div class="d-grid">
+        <button type="submit" class="esi-btn main-btn">Log In</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block footer %}
+<div class="mt-1 text-center">
+    <p class="mb-2">
+        <a href="{% url 'password_reset' %}" class="text-decoration-none heading-orange fw-normal">Forgot Password?</a>
+    </p>
+    <p class="small text-muted">
+        Don't have an account?
+        <a href="{% url 'accounts:signup' %}" class="text-decoration-none heading-orange fw-normal">Register here</a>.
+    </p>
 </div>
 {% endblock %}
+

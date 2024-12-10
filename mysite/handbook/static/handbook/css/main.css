@@ -142,6 +142,27 @@ section{
     font-family: 'Montserrat', sans-serif;
 }
 
+/* || LOGIN */
+.form-signup-card{
+    width: 100%;
+    padding: 15px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    max-width: 400px;
+    background-color: var(--light-bg-color);
+}
+
+.form-signup-container{
+    display: flex;
+    -webkit-box-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: var(--dark-bg-color);
+}
+
 
 /* || NAVBAR */
 .esi-navbar{
@@ -291,6 +312,10 @@ section{
 
 /* || MEDIA QUERIES */
 @media (min-width: 768px) {
+    .form-signup-card{
+        max-width: 500px;
+    }
+
     .home-container p {
         font-size: 1.0625rem;
         margin: 25px 0;
@@ -299,6 +324,10 @@ section{
 }
 
 @media (min-width: 992px) {
+    .form-signup-card{
+        max-width: 608px;
+    }
+
     /* || NAVBAR */
     .nav-profile {
         width: 100%;

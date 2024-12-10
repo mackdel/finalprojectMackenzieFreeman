@@ -4,7 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import CreateView
 from django.views.generic import TemplateView
 from handbook.models import PolicyRequest
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, LoginForm
 
 # Signup view: Allows users to make a new account
 class SignUpView(CreateView):
@@ -15,6 +15,9 @@ class SignUpView(CreateView):
 
 # Login View: Redirect users based on their role
 class RoleBasedLoginView(LoginView):
+    form_class = LoginForm  # Use the custom LoginForm
+    template_name = 'registration/login.html'
+
     def get_success_url(self):
         user = self.request.user
 
