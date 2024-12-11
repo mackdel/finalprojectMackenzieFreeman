@@ -3,7 +3,7 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.edit import CreateView
 from django.views.generic import TemplateView
-from handbook.models import PolicyRequest
+from handbook.models import PolicyFeedback
 from .forms import CustomUserCreationForm, LoginForm
 
 # Signup view: Allows users to make a new account
@@ -43,5 +43,5 @@ class UserProfileView(LoginRequiredMixin, TemplateView):
         # Add user details to context
         context['user'] = user
         # Fetch the user's submitted forms
-        context['submitted_forms'] = PolicyRequest.objects.filter(email=user.email)
+        context['submitted_forms'] = PolicyFeedback.objects.filter(email=user.email)
         return context

@@ -403,21 +403,21 @@ class ArchivedPolicy(models.Model):
         verbose_name_plural = "Archived Policies"  # Plural form
 
 
-# Represents request forms on each policy
-class PolicyRequest(models.Model):
+# Represents feedback forms on each policy
+class PolicyFeedback(models.Model):
     policy = models.ForeignKey('Policy', on_delete=models.CASCADE, related_name='requests')
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField()
     question = models.TextField()
     submitted_at = models.DateTimeField(auto_now_add=True)
-    is_resolved = models.BooleanField(default=False)  # Tracks whether the request has been addressed
+    is_resolved = models.BooleanField(default=False)  # Tracks whether the feedback has been addressed
     admin_notes = models.TextField(blank=True, null=True)  # Admin can add follow-up notes
 
-    # Display the request details, including the policy title and submitter's name
+    # Display the feedback details, including the policy title and submitter's name
     def __str__(self):
         return f"Request for {self.policy.title} by {self.first_name} {self.last_name}"
 
     class Meta:
-        verbose_name = "Policy Request"  # Singular form
-        verbose_name_plural = "Policy Requests"  # Plural form
+        verbose_name = "Policy Feedback"  # Singular form
+        verbose_name_plural = "Policy Feedback"  # Plural form

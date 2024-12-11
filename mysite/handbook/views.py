@@ -7,7 +7,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.contrib import messages
 from datetime import datetime
 from .models import PolicySection, Policy, PolicyApprovalRequest, ProcedureStep, Definition
-from .forms import PolicyRequestForm, MajorChangeQuestionnaireForm
+from .forms import PolicyFeedbackForm, MajorChangeQuestionnaireForm
 from .utils import send_mailgun_email
 from django.template.loader import render_to_string
 from django.db.models import ForeignKey, ManyToManyField
@@ -62,14 +62,14 @@ class FetchIntroductionDetailsView(LoginRequiredMixin, TemplateView):
     template_name = "handbook/introduction_fragment.html"
 
 
-# Policy request form view: Allows users to submit questions/clarifications for a specific policy
-class PolicyRequestFormView(LoginRequiredMixin, FormView):
-    form_class = PolicyRequestForm
-    template_name = "handbook/request_form.html"
+# Policy feedback form view: Allows users to submit questions/clarifications for a specific policy
+class PolicyFeedbackFormView(LoginRequiredMixin, FormView):
+    form_class = PolicyFeedbackForm
+    template_name = "handbook/feedback_form.html"
 
     def get_success_url(self):
         # Stay on the same page but pass success=True as a GET parameter
-        return reverse("handbook:request_form", kwargs={'policy_number': self.kwargs['policy_number']})
+        return reverse("handbook:feedback_form", kwargs={'policy_number': self.kwargs['policy_number']})
 
     def get_form_kwargs(self):
         # Pass the current user to the form to prepopulate fields
@@ -115,7 +115,7 @@ class PolicyRequestFormView(LoginRequiredMixin, FormView):
         # Send confirmation email to the employee
         send_mailgun_email(
             to_email=employee_email,
-            subject="Policy Request Received",
+            subject="Policy Feedback Received",
             variables=variables,
         )
 

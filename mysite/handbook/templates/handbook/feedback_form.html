@@ -1,7 +1,7 @@
 {% extends "handbook/base.html" %}
 
 {% block title %}
-    Submit a Question - {{ policy.number }} {{ policy.title }}
+    Submit Feedback - {{ policy.number }} {{ policy.title }}
 {% endblock %}
 
 {% block content %}
@@ -10,11 +10,11 @@
         <div class="col-md-8 col-lg-8">
             <!-- Header Section -->
             <div class="text-center">
-                <h1 class="display-5 text-center mb-4">Submit a Question</h1>
+                <h1 class="display-5 text-center mb-4">Submit Feedback</h1>
                 <h2 class="h4 text-primary">Policy: {{ policy.number }} {{ policy.title }}</h2>
             </div>
 
-            <p class="text-muted">Fill out the form below to ask a question or request clarification regarding this policy. Our team will review your submission and respond accordingly.</p>
+            <p class="text-muted">Fill out the form below to ask a question or request changes regarding this policy. Our team will review your submission and respond accordingly.</p>
 
             <!-- Form Section -->
             <form method="post" class="bg-light p-4 rounded shadow-sm needs-validation" novalidate>
@@ -32,9 +32,9 @@
                     {{ form.email }}
                 </div>
                 <div class="form-group">
-                    <label for="id_question" class="form-label">Question</label>
-                    <textarea id="id_question" name="question" class="form-control" placeholder="Your Question or Clarification" required></textarea>
-                    <div class="invalid-feedback">Please provide your question or clarification.</div>
+                    <label for="id_question" class="form-label">Feedback</label>
+                    <textarea id="id_question" name="question" class="form-control" placeholder="Your Questions/Clarifications/Feedback" required></textarea>
+                    <div class="invalid-feedback">Please provide your question or changes.</div>
                 </div>
                 <div class="d-grid">
                     <button type="submit" class="btn btn-primary">Submit</button>
@@ -53,11 +53,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Thank you for submitting your question for Policy <strong>{{ policy.number }}</strong> - <strong>{{ policy.title }}</strong>. Our team will review it and get back to you soon.</p>
+                <p>Thank you for submitting your feedback for Policy <strong>{{ policy.number }}</strong> - <strong>{{ policy.title }}</strong>. Our team will review it and get back to you soon.</p>
             </div>
             <div class="modal-footer">
                 <a href="{% url 'handbook:sections' %}" class="btn btn-secondary">Back to Policies</a>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

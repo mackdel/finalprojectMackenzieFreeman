@@ -1,5 +1,5 @@
 from django import forms
-from .models import PolicyRequest
+from .models import PolicyFeedback
 
 
 class MajorChangeQuestionnaireForm(forms.Form):
@@ -21,9 +21,9 @@ class MajorChangeQuestionnaireForm(forms.Form):
     )
 
 
-class PolicyRequestForm(forms.ModelForm):
+class PolicyFeedbackForm(forms.ModelForm):
     class Meta:
-        model = PolicyRequest
+        model = PolicyFeedback
         fields = ['first_name', 'last_name', 'email', 'question']
         widgets = {
             'first_name': forms.TextInput(attrs={
@@ -40,7 +40,7 @@ class PolicyRequestForm(forms.ModelForm):
             }),
             'question': forms.Textarea(attrs={
                 'class': 'form-control',
-                'placeholder': 'Your Question or Clarification',
+                'placeholder': 'Your Questions/Clarifications/Feedback',
                 'required': 'required',
             }),
         }

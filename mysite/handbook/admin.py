@@ -2,7 +2,7 @@ from django.db import models
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.contrib import admin
-from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep, PolicyApprovalRequest, ArchivedPolicy
+from .models import PolicySection, Policy, Definition, PolicyFeedback, ProcedureStep, PolicyApprovalRequest, ArchivedPolicy
 from accounts.models import CustomUser, Department
 from accounts.admin import CustomUserAdmin, DepartmentAdmin
 
@@ -507,8 +507,8 @@ class PolicyAdminForDepartmentHead(PolicyAdmin):
         return qs
 
 
-# Admin configuration for Policy Request model
-class PolicyRequestAdmin(admin.ModelAdmin):
+# Admin configuration for Policy Feedback model
+class PolicyFeedbackAdmin(admin.ModelAdmin):
     fieldsets = [
         ("Request Information", {
             "fields": ('policy', 'first_name', 'last_name', 'email', 'question', 'submitted_at')
@@ -523,38 +523,38 @@ class PolicyRequestAdmin(admin.ModelAdmin):
     search_fields = ('first_name', 'last_name', 'email', 'question', 'policy__title', 'policy__section__title')
     ordering = ('-submitted_at',)  # Default ordering: newest submissions first
 
-    actions = ['mark_requests_resolved'] # Custom admin action
-    # Custom admin action to mark selected requests as resolved
-    def mark_requests_resolved(self, request, queryset):
-        count = queryset.update(is_resolved=True) # Update the is_resolved field for selected requests
-        self.message_user(request, f"{count} request(s) marked as resolved.") # Display a success message
+    actions = ['mark_feedbacks_resolved'] # Custom admin action
+    # Custom admin action to mark selected feedback as resolved
+    def mark_feedbacks_resolved(self, request, queryset):
+        count = queryset.update(is_resolved=True) # Update the is_resolved field for selected feedbacks
+        self.message_user(request, f"{count} feedback(s) marked as resolved.") # Display a success message
     # Description for the action
-    mark_requests_resolved.short_description = "Mark selected requests as resolved"
+    mark_feedbacks_resolved.short_description = "Mark selected feedbacks as resolved"
 
-    # Prevent adding new Policy Requests manually
+    # Prevent adding new Policy Feedback manually
     def has_add_permission(self, request):
         return False
 
 
-# Department Head Configuration of Policy Request model
-class PolicyRequestAdminForDepartmentHead(PolicyRequestAdmin):
+# Department Head Configuration of Policy Feedback model
+class PolicyFeedbackAdminForDepartmentHead(PolicyFeedbackAdmin):
     # Grant module access only to department heads
     def has_module_permission(self, request):
         return request.user.is_department_head()
 
-    # Allow department heads to view requests for their department's policies
+    # Allow department heads to view feedback for their department's policies
     def has_view_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj is None or obj.policy.policy_owner == request.user.department
         return super().has_view_permission(request, obj)
 
-    # Allow department heads to resolve requests for their department's policies
+    # Allow department heads to resolve feedback for their department's policies
     def has_change_permission(self, request, obj=None):
         if request.user.is_department_head():
             return obj and obj.policy.policy_owner == request.user.department
         return super().has_change_permission(request, obj)
 
-    # Restrict queryset to requests related to policies within the department head's department
+    # Restrict queryset to feedback related to policies within the department head's department
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_department_head():
@@ -997,7 +997,7 @@ class ArchivedPolicyAdmin(admin.ModelAdmin):
 super_admin_site.register(PolicySection, PolicySectionAdmin)
 super_admin_site.register(Policy, PolicyAdmin)
 super_admin_site.register(Definition, DefinitionAdmin)
-super_admin_site.register(PolicyRequest, PolicyRequestAdmin)
+super_admin_site.register(PolicyFeedback, PolicyFeedbackAdmin)
 super_admin_site.register(PolicyApprovalRequest, PolicyApprovalRequestAdmin)
 
 # Register accounts models to super admin
@@ -1012,6 +1012,6 @@ executive_admin_site.register(ArchivedPolicy, ArchivedPolicyAdmin)
 
 # Register models with the department head admin site
 department_head_admin.register(Policy, PolicyAdminForDepartmentHead)
-department_head_admin.register(PolicyRequest, PolicyRequestAdminForDepartmentHead)
+department_head_admin.register(PolicyFeedback, PolicyFeedbackAdminForDepartmentHead)
 department_head_admin.register(Definition, DefinitionAdminForDepartmentHead)
 department_head_admin.register(PolicyApprovalRequest, PolicyApprovalRequestAdminForDeptHead)
