@@ -5,39 +5,38 @@
 {% endblock %}
 
 {% block content %}
-<div class="container my-5">
+<div class="home-container mb-5">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-8">
+        <div class="col-md-9">
             <!-- Header Section -->
-            <div class="text-center">
-                <h1 class="display-5 text-center mb-4">Submit Feedback</h1>
-                <h2 class="h4 text-primary">Policy: {{ policy.number }} {{ policy.title }}</h2>
+            <div class="text-center mb-4">
+                <h1 class="heading-orange">Submit Feedback</h1>
+                <text class="h5">Policy: {{ policy.number }} {{ policy.title }}</text>
+                <p class="text-muted">Fill out the form below to ask a question or request changes regarding this policy. Our team will review your submission and respond accordingly.</p>
             </div>
 
-            <p class="text-muted">Fill out the form below to ask a question or request changes regarding this policy. Our team will review your submission and respond accordingly.</p>
-
             <!-- Form Section -->
-            <form method="post" class="bg-light p-4 rounded shadow-sm needs-validation" novalidate>
+            <form method="post" class="white-background p-4 rounded shadow-sm needs-validation" novalidate>
                 {% csrf_token %}
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="id_first_name" class="form-label">First Name</label>
-                    {{ form.first_name }}
+                    {{ form.first_name}}
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="id_last_name" class="form-label">Last Name</label>
                     {{ form.last_name }}
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="id_email" class="form-label">Email</label>
-                    {{ form.email }}
+                    {{ form.email}}
                 </div>
-                <div class="form-group">
+                <div class="mb-3">
                     <label for="id_question" class="form-label">Feedback</label>
                     <textarea id="id_question" name="question" class="form-control" placeholder="Your Questions/Clarifications/Feedback" required></textarea>
                     <div class="invalid-feedback">Please provide your question or changes.</div>
                 </div>
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="submit" class="esi-btn main-btn">Submit</button>
                 </div>
             </form>
         </div>
@@ -45,18 +44,17 @@
 </div>
 
 <!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+<div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="successModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title" id="successModalLabel">Submission Successful</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Thank you for submitting your feedback for Policy <strong>{{ policy.number }}</strong> - <strong>{{ policy.title }}</strong>. Our team will review it and get back to you soon.</p>
             </div>
             <div class="modal-footer">
-                <a href="{% url 'handbook:sections' %}" class="btn btn-secondary">Back to Policies</a>
+                <a href="{% url 'handbook:sections' %}" class="esi-btn secondary-btn is-dark">Back to Policies</a>
             </div>
         </div>
     </div>
