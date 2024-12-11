@@ -1,12 +1,10 @@
 from django.db import models
 from django.urls import reverse
 from django.http import HttpResponseRedirect
-from django.contrib import admin, messages
+from django.contrib import admin
 from .models import PolicySection, Policy, Definition, PolicyRequest, ProcedureStep, PolicyApprovalRequest, ArchivedPolicy
 from accounts.models import CustomUser, Department
 from accounts.admin import CustomUserAdmin, DepartmentAdmin
-from .utils import send_mailgun_email
-from django.core.exceptions import ValidationError
 
 """
 Custom admin sites for different user roles (Super Admins, Executives, Department Heads).
